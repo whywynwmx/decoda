@@ -5805,6 +5805,7 @@ bool MainFrame::ShowProjectSettingsDialog()
     dialog.SetCommandArguments(m_project->GetCommandArguments());
     dialog.SetWorkingDirectory(m_project->GetWorkingDirectory());
     dialog.SetSymbolsDirectory(m_project->GetSymbolsDirectory());
+    dialog.SetJITDisabled(m_project->GetJITDisabled());
 
     dialog.SetSccProvider(m_project->GetSccProvider());
     dialog.SetSccUser(m_project->GetSccUser());
@@ -5818,6 +5819,7 @@ bool MainFrame::ShowProjectSettingsDialog()
         m_project->SetCommandLine(dialog.GetCommandLine());
         m_project->SetCommandArguments(dialog.GetCommandArguments());
         m_project->SetWorkingDirectory(dialog.GetWorkingDirectory());
+        m_project->SetJITDisabled(dialog.GetJITDisabled());
         m_project->SetSymbolsDirectory(dialog.GetSymbolsDirectory());
     
         m_project->SetSccProvider(dialog.GetSccProvider());

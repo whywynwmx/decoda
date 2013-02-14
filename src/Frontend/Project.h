@@ -149,6 +149,9 @@ public:
      */
     void SetWorkingDirectory(const wxString& workingdirectory);
 
+    bool GetJITDisabled() const;
+    void SetJITDisabled(bool JITDisabled);
+
     /**
      * Returns the directory when the application will look for PDB files.
      */
@@ -373,6 +376,7 @@ private:
     wxString                m_commandArguments;
     wxString                m_workingDirectory;
     wxString                m_symbolsDirectory;
+    bool                    m_JITDisabled;
 
     std::vector<File*>      m_files;
 

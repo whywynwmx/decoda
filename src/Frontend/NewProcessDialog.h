@@ -58,6 +58,19 @@ public:
      * Called when the user clicks the Browse button for browsing the source control project.
      */
     void OnBrowseSccProject(wxCommandEvent& event);
+    
+    /**
+     * Called when the user toggles Disable JIT 
+     */
+    void OnDisableJIT(wxCommandEvent& event);
+
+    void SetJITDisabled(bool JITDisabled){
+      m_JITDisabled->SetValue(JITDisabled);
+    }
+
+    bool GetJITDisabled(){
+      return m_JITDisabled->GetValue();
+    }
 
     /**
      * Called when the user selects an option in the source control dropdown.
@@ -173,19 +186,21 @@ private:
         ID_BrowseSymbolsDirectory,
         ID_SelectScc,
         ID_BrowseSccProject,
+        ID_DisableJIT
     };	
 
     wxTextCtrl*                 m_commandLineBox;
     wxTextCtrl*                 m_commandArgumentsBox;
-	wxTextCtrl*                 m_workingDirectoryBox;
+	  wxTextCtrl*                 m_workingDirectoryBox;
+    wxCheckBox*                 m_JITDisabled;
     wxTextCtrl*                 m_symbolsDirectoryBox;
     wxChoice*                   m_sccProviderChoice;
     wxTextCtrl*                 m_sccProjectBox;
 
-	wxButton*                   m_button1;
-	wxButton*                   m_button21;
-	wxButton*                   m_sccProjectBrowseButton;
-	wxStdDialogButtonSizer*     m_sdbSizer1;
+	  wxButton*                   m_button1;
+	  wxButton*                   m_button21;
+	  wxButton*                   m_sccProjectBrowseButton;
+	  wxStdDialogButtonSizer*     m_sdbSizer1;
 
     wxString                    m_sccUser;
     wxString                    m_sccProjName;

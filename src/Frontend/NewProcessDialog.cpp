@@ -112,6 +112,11 @@ NewProcessDialog::NewProcessDialog( wxWindow* parent )
 	fgSizer1->Add( m_button21, 0, wxALL, 5 );
 
 #endif
+  staticText = new wxStaticText( this, wxID_ANY, wxT("Extra:"), wxDefaultPosition, wxSize( 90,-1 ), 0 );
+	fgSizer1->Add( staticText, 0, wxALL, 5 );
+
+  m_JITDisabled = new wxCheckBox( this, wxID_ANY, wxT("Disable JIT(LuaJIT only)"), wxDefaultPosition, wxSize(30, -1), 0 );
+	fgSizer1->Add( m_JITDisabled, 0, wxALL|wxEXPAND, 5 );
 	
 	sbSizer1->Add( fgSizer1, 1, wxEXPAND, 5 );
 	

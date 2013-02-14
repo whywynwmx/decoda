@@ -65,6 +65,7 @@ Project::Project()
     m_needsSave     = false;
     m_needsUserSave = false;
     m_tempIndex = 0;
+    m_JITDisabled = false;
 }
 
 Project::~Project()
@@ -197,6 +198,16 @@ void Project::SetCommandArguments(const wxString& commandArguments)
 const wxString& Project::GetWorkingDirectory() const
 {
     return m_workingDirectory;
+}
+
+bool Project::GetJITDisabled() const
+{
+    return m_JITDisabled;
+}
+
+void Project::SetJITDisabled(bool JITDisabled)
+{
+    m_JITDisabled = JITDisabled;
 }
 
 void Project::SetWorkingDirectory(const wxString& workingDirectory)
@@ -785,6 +796,7 @@ bool Project::SaveUserSettings(const wxString& fileName)
     root->AddChild(WriteXmlNode("working_directory",    m_workingDirectory));
     root->AddChild(WriteXmlNode("symbols_directory",    m_symbolsDirectory));
 #endif
+    root->AddChild(WriteXmlNodeBool("jit_disabled",    m_JITDisabled));
     root->AddChild(WriteXmlNode("command_arguments",    m_commandArguments));
 
     // Add the source control settings.
@@ -859,6 +871,7 @@ bool Project::LoadUserSettings(const wxString& fileName)
         || ReadXmlNode(node, "working_directory",   m_workingDirectory)
         || ReadXmlNode(node, "symbols_directory",   m_symbolsDirectory)
 #endif
+        || ReadXmlNode(node, "jit_disabled",   m_JITDisabled)
         || LoadSccNode(node)
         || LoadUserFilesNode(baseDirectory, node);
         
