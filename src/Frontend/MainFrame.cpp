@@ -5245,7 +5245,7 @@ void MainFrame::ReloadFile(OpenFile* file)
 
     editor.SetModEventMask(wxSCI_MODEVENTMASKALL);
     
-    int newLineCount = editor.GetLineCount();
+    unsigned int newLineCount = editor.GetLineCount();
     
     std::vector<unsigned int>& breakpoints = file->file->breakpoints;
     
@@ -5827,6 +5827,8 @@ bool MainFrame::ShowProjectSettingsDialog()
         m_project->SetSccProjectName(dialog.GetSccProjectName());
         m_project->SetSccLocalPath(dialog.GetSccLocalPath());
         m_project->SetSccAuxProjectPath(dialog.GetSccAuxProjectPath());
+
+
 
         InitializeSourceControl();
         return true;
