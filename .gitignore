@@ -2,3 +2,5 @@ build/*
 bin/*
 install/output/*
 docs/output/*
+libs/tinyxml/*
+premake4.exe
