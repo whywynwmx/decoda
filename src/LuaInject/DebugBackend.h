@@ -73,6 +73,10 @@ public:
      */
     bool Initialize(HINSTANCE hInstance);
 
+    void HandleOptions(DebugBackendOptions* options){
+      m_disableJIT = options->JITDisabled;
+    }
+
     /**
      * Attaches the debugger to the state.
      */
@@ -206,6 +210,15 @@ public:
      * Called when a new API is created.
      */
     void CreateApi(unsigned long api);
+
+    bool CheckDisableJit(unsigned long api, lua_State* L){
+
+      if(m_disableJIT){
+        return EnableJit(api, L, false);
+      }
+
+      return m_disableJIT;
+    }
 
     /**
      * Enables or disable just-in-time compilation for the state. If LuaJIT is not being used
@@ -581,7 +594,7 @@ private:
     stdext::hash_set<std::string>   m_ignoreExceptions;
 
     std::vector<Api>                m_apis;
-
+    bool                            m_disableJIT;
     mutable bool                    m_warnedAboutUserData;
 
 };

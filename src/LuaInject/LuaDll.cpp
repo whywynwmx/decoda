@@ -2359,7 +2359,7 @@ int lua_load_worker(unsigned long api, lua_State* L, lua_Reader reader, void* da
 
     // Disables JIT compilation if LuaJIT is being used. Otherwise we won't get hooks for
     // this chunk.
-    if (DebugBackend::Get().EnableJit(api, L, false))
+    if (DebugBackend::Get().CheckDisableJit(api, L))
     {
         if (!g_warnedAboutJit)
         {

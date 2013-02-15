@@ -610,6 +610,34 @@ void DebugBackend::Message(const char* message, MessageType type)
     m_eventChannel.Flush();
 }
 
+void DebugBackend::VMInitialize(unsigned long api, lua_State* L, VirtualMachine* vm){
+
+    // Check if we need to use the LuaJIT work around for the debug API.   
+    lua_rawgetglobal_dll(api, L, "jit");
+    int jitTable = lua_gettop_dll(api, L);
+    
+    if (!lua_isnil_dll(api, L, -1))
+    {
+        
+        lua_pushstring_dll(api, L, "version_num");
+        lua_gettable_dll(api, L, jitTable);
+    
+        int version = lua_tointeger_dll(api, L, -1);
+        if (version >= 20000)
+        {
+            vm->luaJitWorkAround = true;
+            Message("Warning 1009: Enabling LuaJIT C call return work-around", MessageType_Warning);
+        }
+    
+        lua_pop_dll(api, L, 1);
+    
+    }
+    
+    lua_pop_dll(api, L, 1);
+    
+    vm->initialized = true;
+}
+
 void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
 {
 
@@ -642,35 +670,10 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
 
     if (!vm->initialized && ar->event == LUA_HOOKLINE)
     {
-            
         // We do this initialization work here since we check for things that
         // are registered after the state is created.
-
-        // Check if we need to use the LuaJIT work around for the debug API.
-
-        lua_rawgetglobal_dll(api, L, "jit");
-        int jitTable = lua_gettop_dll(api, L);
-
-        if (!lua_isnil_dll(api, L, -1))
-        {
-            
-            lua_pushstring_dll(api, L, "version_num");
-            lua_gettable_dll(api, L, jitTable);
-
-            int version = lua_tointeger_dll(api, L, -1);
-            if (version >= 20000)
-            {
-                vm->luaJitWorkAround = true;
-                Message("Warning 1009: Enabling LuaJIT C call return work-around", MessageType_Warning);
-            }
-
-            lua_pop_dll(api, L, 1);
-
-        }
-
-        lua_pop_dll(api, L, 1);
-
-        vm->initialized = true;
+        VMInitialize(api, L, vm);
+    }
 
     }
 
@@ -2457,10 +2460,12 @@ int DebugBackend::LoadScriptWithoutIntercept(unsigned long api, lua_State* L, co
 DWORD WINAPI DebugBackend::FinishInitialize(LPVOID param)
 {
 
-    const char* symbolsDirectory = static_cast<const char*>(param);
+    DebugBackendOptions* options = static_cast<DebugBackendOptions*>(param);
+
+    DebugBackend::Get().HandleOptions(options);
 
     extern HINSTANCE g_hInstance;
-    return static_cast<DWORD>(InstallLuaHooker(g_hInstance, symbolsDirectory));
+    return static_cast<DWORD>(InstallLuaHooker(g_hInstance, options->remoteSymbolsDirectory));
 
 }
 

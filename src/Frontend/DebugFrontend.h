@@ -275,6 +275,11 @@ private:
      * Duplicates a string into the memory of the specified process.
      */
     char* RemoteStrDup(HANDLE process, const char* string);
+    
+    /**
+     * Duplicates a some data into the memory of the specified process.
+     */
+    void* RemoteDataDup(HANDLE process, const void* data, int dataSize);
 
     /**
      * Counts the number of lines in a piece of text.

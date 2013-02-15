@@ -816,8 +816,14 @@ bool DebugFrontend::ProcessInitialization(const char* symbolsDirectory)
 
     char* remoteSymbolsDirectory = RemoteStrDup(m_process, symbolsDirectory);
     
+    DebugBackendOptions options;
+    options.remoteSymbolsDirectory = remoteSymbolsDirectory;
+    options.JITDisabled = false;
+    
+    void* threadArg = RemoteDataDup(m_process, &options, sizeof(DebugBackendOptions));
+
     DWORD threadId;
-    HANDLE thread = CreateRemoteThread(m_process, NULL, 0, (LPTHREAD_START_ROUTINE)function, remoteSymbolsDirectory, 0, &threadId);
+    HANDLE thread = CreateRemoteThread(m_process, NULL, 0, (LPTHREAD_START_ROUTINE)function, threadArg, 0, &threadId);
 
     if (thread == NULL)
     {
@@ -956,6 +962,18 @@ char* DebugFrontend::RemoteStrDup(HANDLE process, const char* string)
     WriteProcessMemory(process, remoteString, string, length, &numBytesWritten);
 
     return static_cast<char*>(remoteString);
+
+}
+
+void* DebugFrontend::RemoteDataDup(HANDLE process, const void* data, int dataSize)
+{
+    
+    void* remoteString = VirtualAllocEx(process, NULL, dataSize, MEM_COMMIT, PAGE_READWRITE);
+
+    DWORD numBytesWritten;
+    WriteProcessMemory(process, remoteString, data, dataSize, &numBytesWritten);
+
+    return remoteString;
 
 }
 

@@ -68,4 +68,9 @@ enum CommandId
     CommandId_IgnoreException   = 13,   // Instructs the backend to ignore the specified exception message in the future.
 };
 
+struct DebugBackendOptions{
+  char* remoteSymbolsDirectory;
+  bool JITDisabled;
+};
+
 #endif
