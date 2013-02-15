@@ -4885,7 +4885,9 @@ void MainFrame::DeleteAllBreakpoints()
 
     }
 
-    DebugFrontend::Get().RemoveAllBreakPoints(0);
+    if(DebugFrontend::Get().GetState() != DebugFrontend::State_Inactive){
+      DebugFrontend::Get().RemoveAllBreakPoints(0);
+    }
 
     m_breakpointsWindow->UpdateBreakpoints();
 
