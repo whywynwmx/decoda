@@ -284,6 +284,7 @@ DebugBackend::VirtualMachine* DebugBackend::AttachState(unsigned long api, lua_S
     vm->api                 = api;
     vm->stackTop            = 0;
     vm->luaJitWorkAround    = false;
+    vm->haveActiveBreakpoints = false;
     
     m_vms.push_back(vm);
     m_stateToVm.insert(std::make_pair(L, vm));
@@ -301,7 +302,9 @@ DebugBackend::VirtualMachine* DebugBackend::AttachState(unsigned long api, lua_S
     RegisterDebugLibrary(api, L);
 
     // Start debugging on this VM.
-    SetHookEnabled(api, L, true);
+    if(m_mode == Mode_StepInto || m_mode == Mode_StepOver){
+      SetHookEnabled(api, L, true);
+    }
 
     // This state may be a thread which will be garbage collected, so we need to register
     // to recieve notification when it is destroyed.
@@ -650,7 +653,6 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
 
     // Note this executes in the thread of the script being debugged,
     // not our debugger, so we can block.
-
     VirtualMachine* vm = NULL;
     StateToVmMap::const_iterator iterator = m_stateToVm.find(L);
 
@@ -675,6 +677,8 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
         VMInitialize(api, L, vm);
     }
 
+    if(!vm->haveActiveBreakpoints && !(m_mode == Mode_StepInto || m_mode == Mode_StepOver)){
+      SetHookEnabled(api, L, false);
     }
 
     // Get the name of the VM. Polling like this is pretty excessive since the
@@ -921,6 +925,9 @@ void DebugBackend::CommandThreadProc()
             case CommandId_StepInto:
                 StepInto();
                 break;
+            case CommandId_DeleteAllBreakpoints:
+                DeleteAllBreakpoints();
+                break;
             case CommandId_ToggleBreakpoint:
                 {
                     
@@ -999,6 +1006,18 @@ DWORD WINAPI DebugBackend::StaticCommandThreadProc(LPVOID param)
     return 0;
 }
 
+void DebugBackend::ActiveLuaHookInAllVms()
+{
+    StateToVmMap::iterator end = m_stateToVm.end();
+
+    for (StateToVmMap::iterator it = m_stateToVm.begin(); it != end; it++)
+    {
+      VirtualMachine* vm = it->second;
+      //May have issues with L not being the currently running thread
+      SetHookEnabled(vm->api, vm->L, true);
+    }
+}
+
 void DebugBackend::StepInto()
 {
     
@@ -1012,6 +1031,7 @@ void DebugBackend::StepInto()
     m_mode = Mode_StepInto;
     SetEvent(m_stepEvent);
 
+    ActiveLuaHookInAllVms();
 }
 
 void DebugBackend::StepOver()
@@ -1026,6 +1046,8 @@ void DebugBackend::StepOver()
 
     m_mode = Mode_StepOver;
     SetEvent(m_stepEvent);
+
+    ActiveLuaHookInAllVms();
 }
 
 
@@ -1047,6 +1069,7 @@ void DebugBackend::Continue()
 void DebugBackend::Break()
 {
     m_mode = Mode_StepInto;
+    ActiveLuaHookInAllVms();
 }
 
 void DebugBackend::ToggleBreakpoint(lua_State* L, unsigned int scriptIndex, unsigned int line)
@@ -1082,8 +1105,13 @@ void DebugBackend::ToggleBreakpoint(lua_State* L, unsigned int scriptIndex, unsi
         {
             script->breakpoints.resize(line + 1, false);
         }
+        
+        bool breakpointSet = !script->breakpoints[line];
+        script->breakpoints[line] = breakpointSet;
 
-        script->breakpoints[line] = !script->breakpoints[line];
+        if(breakpointSet){
+          BreakpointsActiveForScript(scriptIndex);
+        }
 
         // Send back the event telling the frontend that we set/unset the breakpoint.
         m_eventChannel.WriteUInt32(EventId_SetBreakpoint);    
@@ -1095,6 +1123,43 @@ void DebugBackend::ToggleBreakpoint(lua_State* L, unsigned int scriptIndex, unsi
     
     }
 
+}
+
+void DebugBackend::BreakpointsActiveForScript(unsigned int scriptIndex){
+
+  m_haveActiveBreakpoints = true;
+
+  StateToVmMap::iterator end = m_stateToVm.end();
+
+  bool needsHookSet = false;
+
+  for (StateToVmMap::iterator it = m_stateToVm.begin(); it != end; it++)
+  {
+      if(!it->second->haveActiveBreakpoints){
+          it->second->haveActiveBreakpoints = true;
+          needsHookSet = true;
+      }
+  }
+
+  if(needsHookSet)
+  {
+      ActiveLuaHookInAllVms();
+  }
+}
+
+void DebugBackend::DeleteAllBreakpoints(){
+
+  for(std::vector<Script*>::iterator it = m_scripts.begin(); it != m_scripts.end(); it++)
+  {
+      (*it)->breakpoints.clear();
+  }
+
+  //Set all haveActiveBreakpoints for the vms back to false we leave to the hook being called for the vm
+  //to auto unhook itself
+  for (StateToVmMap::iterator it = m_stateToVm.begin(); it != m_stateToVm.end(); it++)
+  {
+      it->second->haveActiveBreakpoints = false;
+  }
 }
 
 void DebugBackend::SendBreakEvent(unsigned long api, lua_State* L, int stackTop)
@@ -1270,6 +1335,11 @@ int DebugBackend::ErrorHandler(unsigned long api, lua_State* L)
         SendBreakEvent(api, L, 1);
         SendExceptionEvent(L, message);
         WaitForContinue();
+
+        //reenable the Lua hook if it was not active so the debugger can step
+        if((m_mode == Mode_StepOver || m_mode == Mode_StepInto) || GetVm(L)->haveActiveBreakpoints){
+          SetHookEnabled(api, L, true);
+        }
 
     }
         
@@ -1829,7 +1899,10 @@ bool DebugBackend::Evaluate(unsigned long api, lua_State* L, const std::string& 
 
     // Reenable the debugger hook
     EnableIntercepts(true);
-    SetHookEnabled(api, L, true);
+
+    if(GetVm(L)->haveActiveBreakpoints || m_mode == Mode_StepInto || m_mode == Mode_StepOver){
+      SetHookEnabled(api, L, true);
+    }
 
     int t2 = lua_gettop_dll(api, L);
     assert(t1 == t2);

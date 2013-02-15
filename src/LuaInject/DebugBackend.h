@@ -81,6 +81,8 @@ public:
      * Attaches the debugger to the state.
      */
     VirtualMachine* AttachState(unsigned long api, lua_State* L);
+    
+    void VMInitialize(unsigned long api, lua_State* L, VirtualMachine* vm);
 
     /**
      * Detaches the debugger from the state.
@@ -125,6 +127,8 @@ public:
      */
     void Break();
 
+    void ActiveLuaHookInAllVms();
+
     /**
      * Evalates the expression. If there was an error evaluating the expression the
      * method returns false and the error message is stored in the result.
@@ -153,7 +157,10 @@ public:
      * Toggles a breakpoint on the line on or off.
      */
     void ToggleBreakpoint(lua_State* L, unsigned int scriptIndex, unsigned int line);
-
+    
+    void BreakpointsActiveForScript(unsigned int scriptIndex);
+    
+    void DeleteAllBreakpoints();
     /**
      * Calls the function on the top of the stack in a protected environment that
      * triggers a debugger exception on error.
@@ -396,6 +403,7 @@ private:
         std::string     name;
         unsigned int    stackTop;
         bool            luaJitWorkAround;
+        bool            haveActiveBreakpoints;
     };
 
     struct StackEntry
@@ -595,6 +603,7 @@ private:
 
     std::vector<Api>                m_apis;
     bool                            m_disableJIT;
+    bool                            m_haveActiveBreakpoints;
     mutable bool                    m_warnedAboutUserData;
 
 };
