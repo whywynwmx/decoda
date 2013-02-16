@@ -591,10 +591,10 @@ void SetHookMode(unsigned long api, lua_State* L, HookMode mode)
     switch (mode)
     {
     case HookMode_CallsOnly:
-      mask = LUA_MASKCALL;
+      mask = LUA_MASKCALL|LUA_MASKRET;
       break;
     case HookMode_Full:
-      mask = LUA_MASKCALL|LUA_MASKRET|LUA_HOOKTAILRET|LUA_MASKLINE;
+      mask = LUA_MASKCALL|LUA_MASKRET|LUA_MASKLINE;
       break;
     }
 
@@ -625,7 +625,7 @@ HookMode GetHookMode(unsigned long api, lua_State* L)
   {
     return HookMode_None;
   }
-  else if(mask == LUA_MASKCALL)
+  else if(mask == (LUA_MASKCALL|LUA_MASKRET))
   {
     return HookMode_CallsOnly;
   }
