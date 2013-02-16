@@ -75,6 +75,30 @@ bool DebugBackend::Script::GetHasBreakPoint(unsigned int line) const
     return false;
 }
 
+bool DebugBackend::Script::ToggleBreakpoint(unsigned int line)
+{
+    
+    if (breakpoints.size() < line + 1)
+    {
+        breakpoints.resize(line + 1, false);
+    }
+    
+    bool breakpointSet = !breakpoints[line];
+    breakpoints[line] = breakpointSet;
+
+    return breakpointSet;
+}
+
+void DebugBackend::Script::ClearBreakpoints()
+{
+  breakpoints.resize(0);
+}
+
+bool DebugBackend::Script::HasBreakpointsActive()
+{
+  return breakpoints.size() != 0;
+}
+
 DebugBackend& DebugBackend::Get()
 {
     if (s_instance == NULL)
@@ -640,6 +664,41 @@ void DebugBackend::VMInitialize(unsigned long api, lua_State* L, VirtualMachine*
     vm->initialized = true;
 }
 
+void DebugBackend::UpdateHookMode(unsigned long api, lua_State* L)
+{
+    VirtualMachine* vm = GetVm(L);
+    HookMode mode = HookMode_CallsOnly;
+
+    if(vm->haveActiveBreakpoints)
+    {
+        lua_Debug scriptStackSlot;
+
+        lua_getstack_dll(api, L, 0, &scriptStackSlot);
+        lua_getinfo_dll(api, L, "S", &scriptStackSlot);
+        
+        int scriptIndex = GetScriptIndex(scriptStackSlot.source);
+        
+        if(scriptIndex != -1){
+            if(m_scripts[scriptIndex]->HasBreakpointsActive()){
+                mode = HookMode_Full;
+            }
+        }
+    }
+    else
+    {
+        //Switch off the hook if we have no breakpoints
+        mode = HookMode_None;
+    }
+
+    assert(GetHookMode(api, L) == vm->hookMode);
+
+    if(mode != vm->hookMode)
+    {
+        vm->hookMode = mode;
+        SetHookMode(api, L, mode);
+    }
+}
+
 void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
 {
 
@@ -791,6 +850,10 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
     }
     else
     {
+        if(ar->event == LUA_HOOKCALL && m_mode == Mode_Continue){
+          UpdateHookMode(api, L);
+        }
+
         if (ar->event == LUA_HOOKRET || ar->event == LUA_HOOKTAILRET)
         {
             if (m_mode == Mode_StepOver && vm->callCount > 0)
@@ -1100,13 +1163,7 @@ void DebugBackend::ToggleBreakpoint(lua_State* L, unsigned int scriptIndex, unsi
     if (foundValidLine)
     {
 
-        if (script->breakpoints.size() < line + 1)
-        {
-            script->breakpoints.resize(line + 1, false);
-        }
-        
-        bool breakpointSet = !script->breakpoints[line];
-        script->breakpoints[line] = breakpointSet;
+        bool breakpointSet = script->ToggleBreakpoint(line);
 
         if(breakpointSet){
           BreakpointsActiveForScript(scriptIndex);
@@ -1117,7 +1174,7 @@ void DebugBackend::ToggleBreakpoint(lua_State* L, unsigned int scriptIndex, unsi
         m_eventChannel.WriteUInt32(reinterpret_cast<int>(L));  
         m_eventChannel.WriteUInt32(scriptIndex);
         m_eventChannel.WriteUInt32(line);
-        m_eventChannel.WriteUInt32(script->breakpoints[line]);
+        m_eventChannel.WriteUInt32((int)breakpointSet);
         m_eventChannel.Flush();
     
     }
@@ -1151,11 +1208,10 @@ void DebugBackend::DeleteAllBreakpoints(){
 
   for(std::vector<Script*>::iterator it = m_scripts.begin(); it != m_scripts.end(); it++)
   {
-      (*it)->breakpoints.clear();
+      (*it)->ClearBreakpoints();
   }
 
-  //Set all haveActiveBreakpoints for the vms back to false we leave to the hook being called for the vm
-  //to auto unhook itself
+  //Set all haveActiveBreakpoints for the vms back to false we leave it to UpdateHookMode to turn off the hook
   for (StateToVmMap::iterator it = m_stateToVm.begin(); it != m_stateToVm.end(); it++)
   {
       it->second->haveActiveBreakpoints = false;

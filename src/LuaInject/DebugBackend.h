@@ -215,6 +215,8 @@ public:
      */
     void HookCallback(unsigned long api, lua_State* L, lua_Debug* ar);
 
+    void UpdateHookMode(unsigned long api, lua_State* L);
+
     /**
      * Called when a new API is created.
      */
@@ -246,7 +248,12 @@ private:
          * of the script.
          */
         bool GetHasBreakPoint(unsigned int line) const;
-        
+
+        bool ToggleBreakpoint(unsigned int line);
+
+        bool HasBreakpointsActive();
+        void ClearBreakpoints();
+
         std::string                 name;
         std::string                 source;
         std::string                 title;
