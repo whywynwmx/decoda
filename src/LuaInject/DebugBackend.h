@@ -174,7 +174,7 @@ public:
      * name. The name is the same name that was supplied when the script was
      * loaded.
      */
-    unsigned int GetScriptIndex(const char* name) const;
+    unsigned int GetScriptIndex(const std::string& name) const;
 
     /**
      * Returns the class name associated with the metatable index. This makes
@@ -215,7 +215,7 @@ public:
      */
     void HookCallback(unsigned long api, lua_State* L, lua_Debug* ar);
 
-    void UpdateHookMode(unsigned long api, lua_State* L);
+    void UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* hookEvent);
 
     /**
      * Called when a new API is created.
@@ -375,6 +375,8 @@ private:
      */
     static DWORD WINAPI FinishInitialize(LPVOID param);
 
+    void RegisterChunk(lua_State* L, lua_Debug* ar);
+
 private:
 
     static const int s_maxModuleNameLength = 32;
@@ -408,6 +410,7 @@ private:
         bool            initialized;
         int             callCount;
         int             callStackDepth;
+        std::string     lastFunc;
         HookMode        hookMode;
         unsigned long   api;
         std::string     name;
@@ -593,6 +596,7 @@ private:
     HANDLE                          m_loadEvent;
     HANDLE                          m_detachEvent;
 
+    CriticalSection                 m_HookLock;
     CriticalSection                 m_criticalSection;
     CriticalSection                 m_breakLock;
 
