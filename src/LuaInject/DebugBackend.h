@@ -129,6 +129,8 @@ public:
 
     void ActiveLuaHookInAllVms();
 
+    void CheckEnableLuaHook(unsigned long api, lua_State* L);
+
     /**
      * Evalates the expression. If there was an error evaluating the expression the
      * method returns false and the error message is stored in the result.
@@ -399,6 +401,7 @@ private:
         bool            initialized;
         int             callCount;
         int             callStackDepth;
+        HookMode        hookMode;
         unsigned long   api;
         std::string     name;
         unsigned int    stackTop;

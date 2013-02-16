@@ -166,11 +166,19 @@ bool GetAreInterceptsEnabled();
  */
 bool GetIsStdCall(unsigned long api);
 
+enum HookMode
+{
+    HookMode_None,
+    HookMode_CallsOnly,
+    HookMode_Full,
+};
 /**
  * Enables or disables the debug hook callback for the specified state. The state
  * can only be debugged when the hook is installed.
  */
-void SetHookEnabled(unsigned long api, lua_State* L, bool hookEnabled);
+void SetHookMode(unsigned long api, lua_State* L, HookMode mode);
+
+HookMode GetHookMode(unsigned long api, lua_State* L);
 
 /**
  * Creates a new function that can be used with the specified API. The new function

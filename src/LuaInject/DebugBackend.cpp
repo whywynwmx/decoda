@@ -285,6 +285,7 @@ DebugBackend::VirtualMachine* DebugBackend::AttachState(unsigned long api, lua_S
     vm->stackTop            = 0;
     vm->luaJitWorkAround    = false;
     vm->haveActiveBreakpoints = false;
+    vm->hookMode = HookMode_None;
     
     m_vms.push_back(vm);
     m_stateToVm.insert(std::make_pair(L, vm));
@@ -302,9 +303,7 @@ DebugBackend::VirtualMachine* DebugBackend::AttachState(unsigned long api, lua_S
     RegisterDebugLibrary(api, L);
 
     // Start debugging on this VM.
-    if(m_mode == Mode_StepInto || m_mode == Mode_StepOver){
-      SetHookEnabled(api, L, true);
-    }
+    SetHookMode(api, L, HookMode_Full);
 
     // This state may be a thread which will be garbage collected, so we need to register
     // to recieve notification when it is destroyed.
@@ -677,8 +676,8 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
         VMInitialize(api, L, vm);
     }
 
-    if(!vm->haveActiveBreakpoints && !(m_mode == Mode_StepInto || m_mode == Mode_StepOver)){
-      SetHookEnabled(api, L, false);
+    if(vm->hookMode == HookMode_None && m_mode == Mode_Continue){
+      SetHookMode(api, L, HookMode_None);
     }
 
     // Get the name of the VM. Polling like this is pretty excessive since the
@@ -878,7 +877,7 @@ void DebugBackend::CommandThreadProc()
 
             for (unsigned int i = 0; i < m_vms.size(); ++i)
             {
-                SetHookEnabled(m_vms[i]->api, m_vms[i]->L, false);
+              SetHookMode(m_vms[i]->api, m_vms[i]->L, HookMode_None);
             }
 
             // Signal that we're detached.
@@ -1014,7 +1013,7 @@ void DebugBackend::ActiveLuaHookInAllVms()
     {
       VirtualMachine* vm = it->second;
       //May have issues with L not being the currently running thread
-      SetHookEnabled(vm->api, vm->L, true);
+      SetHookMode(vm->api, vm->L, HookMode_Full);
     }
 }
 
@@ -1135,15 +1134,16 @@ void DebugBackend::BreakpointsActiveForScript(unsigned int scriptIndex){
 
   for (StateToVmMap::iterator it = m_stateToVm.begin(); it != end; it++)
   {
-      if(!it->second->haveActiveBreakpoints){
-          it->second->haveActiveBreakpoints = true;
-          needsHookSet = true;
-      }
-  }
+      VirtualMachine* vm = it->second;
+    
+      vm->haveActiveBreakpoints = true;
 
-  if(needsHookSet)
-  {
-      ActiveLuaHookInAllVms();
+      if(vm->hookMode == HookMode_None)
+      {
+          //Just set it to full and let UpdateHookMode downgrade it to HookMode_CallsOnly if needed
+          vm->hookMode = HookMode_Full;
+          SetHookMode(vm->api, vm->L, HookMode_Full);
+      }
   }
 }
 
@@ -1311,6 +1311,17 @@ int DebugBackend::StaticErrorHandler(lua_State* L)
     return s_instance->ErrorHandler(api, L);
 }
 
+void DebugBackend::CheckEnableLuaHook(unsigned long api, lua_State* L)
+{
+
+  if((m_mode == Mode_StepOver || m_mode == Mode_StepInto)){
+    SetHookMode(api, L, HookMode_Full);
+  }else{
+    SetHookMode(api, L, GetVm(L)->hookMode);
+  }
+
+}
+
 int DebugBackend::ErrorHandler(unsigned long api, lua_State* L)
 {
 
@@ -1337,9 +1348,7 @@ int DebugBackend::ErrorHandler(unsigned long api, lua_State* L)
         WaitForContinue();
 
         //reenable the Lua hook if it was not active so the debugger can step
-        if((m_mode == Mode_StepOver || m_mode == Mode_StepInto) || GetVm(L)->haveActiveBreakpoints){
-          SetHookEnabled(api, L, true);
-        }
+        CheckEnableLuaHook(api, L);
 
     }
         
@@ -1782,7 +1791,7 @@ bool DebugBackend::Evaluate(unsigned long api, lua_State* L, const std::string& 
     int localTable   = envTable - 2;
 
     // Disable the debugger hook so that we don't try to debug the expression.
-    SetHookEnabled(api, L, false);
+    SetHookMode(api, L, HookMode_None);
     EnableIntercepts(false);
     
     int stackTop = lua_gettop_dll(api, L);    
@@ -1899,10 +1908,7 @@ bool DebugBackend::Evaluate(unsigned long api, lua_State* L, const std::string& 
 
     // Reenable the debugger hook
     EnableIntercepts(true);
-
-    if(GetVm(L)->haveActiveBreakpoints || m_mode == Mode_StepInto || m_mode == Mode_StepOver){
-      SetHookEnabled(api, L, true);
-    }
+    CheckEnableLuaHook(api, L);
 
     int t2 = lua_gettop_dll(api, L);
     assert(t1 == t2);
