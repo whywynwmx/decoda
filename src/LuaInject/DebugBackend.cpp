@@ -1223,8 +1223,20 @@ void DebugBackend::ToggleBreakpoint(lua_State* L, unsigned int scriptIndex, unsi
 
         bool breakpointSet = script->ToggleBreakpoint(line);
 
-        if(breakpointSet){
+        if(breakpointSet)
+        {
           BreakpointsActiveForScript(scriptIndex);
+        }
+        else
+        {
+          //Check to see if this was the last active breakpoint set if so switch back to fast mode
+          if(!GetHaveActiveBreakpoints())
+          {
+            for(StateToVmMap::iterator it = m_stateToVm.begin(); it != m_stateToVm.end(); it++)
+            {
+              it->second->haveActiveBreakpoints = false;
+            }
+          }
         }
 
         // Send back the event telling the frontend that we set/unset the breakpoint.
@@ -1239,31 +1251,45 @@ void DebugBackend::ToggleBreakpoint(lua_State* L, unsigned int scriptIndex, unsi
 
 }
 
+bool DebugBackend::GetHaveActiveBreakpoints(){
+
+  for(std::vector<Script*>::iterator it = m_scripts.begin(); it != m_scripts.end(); it++)
+  {
+    if((*it)->HasBreakpointsActive()){
+      return true;
+    }
+  }
+
+  return false;
+}
+
+void DebugBackend::SetHaveActiveBreakpoints(bool breakpointsActive){
+
+  m_HookLock.Enter();
+
+    for(StateToVmMap::iterator it = m_stateToVm.begin(); it != m_stateToVm.end(); it++)
+    {
+      VirtualMachine* vm = it->second;
+      
+      vm->haveActiveBreakpoints = breakpointsActive;
+
+      if(breakpointsActive)
+      {
+        //Just set it to full and let UpdateHookMode downgrade it to HookMode_CallsOnly if needed
+        vm->hookMode = HookMode_Full;
+        SetHookMode(vm->api, vm->L, HookMode_Full);
+      }
+    }
+  
+  m_HookLock.Exit();
+}
+
 void DebugBackend::BreakpointsActiveForScript(unsigned int scriptIndex){
 
   m_haveActiveBreakpoints = true;
 
-  StateToVmMap::iterator end = m_stateToVm.end();
-
-  bool needsHookSet = false;
-
-  m_HookLock.Enter();
-
-  for (StateToVmMap::iterator it = m_stateToVm.begin(); it != end; it++)
-  {
-      VirtualMachine* vm = it->second;
-    
-      vm->haveActiveBreakpoints = true;
-
-      if(vm->hookMode == HookMode_None)
-      {
-          //Just set it to full and let UpdateHookMode downgrade it to HookMode_CallsOnly if needed
-          vm->hookMode = HookMode_Full;
-          SetHookMode(vm->api, vm->L, HookMode_Full);
-      }
-  }
-
-  m_HookLock.Exit();
+  //TODO this per VM
+  SetHaveActiveBreakpoints(true);
 }
 
 void DebugBackend::DeleteAllBreakpoints(){
@@ -1274,10 +1300,7 @@ void DebugBackend::DeleteAllBreakpoints(){
   }
 
   //Set all haveActiveBreakpoints for the vms back to false we leave it to UpdateHookMode to turn off the hook
-  for (StateToVmMap::iterator it = m_stateToVm.begin(); it != m_stateToVm.end(); it++)
-  {
-      it->second->haveActiveBreakpoints = false;
-  }
+  SetHaveActiveBreakpoints(false);
 }
 
 void DebugBackend::SendBreakEvent(unsigned long api, lua_State* L, int stackTop)
