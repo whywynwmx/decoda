@@ -412,6 +412,27 @@ int DebugBackend::PostLoadScript(unsigned long api, int result, lua_State* L, co
         return result;
     }
 
+    // Get the name of the VM.
+    lua_rawgetglobal_dll(api, L, "decoda_name");
+    const char* vmName = lua_tostring_dll(api, L, -1);
+
+    if (vmName == NULL)
+    {
+        vmName = "";
+    }
+
+    if (vmName != GetVm(L)->name)
+    {
+        CriticalSectionLock lock(m_criticalSection);
+        GetVm(L)->name = vmName;
+        m_eventChannel.WriteUInt32(EventId_NameVM);
+        m_eventChannel.WriteUInt32(reinterpret_cast<int>(L));
+        m_eventChannel.WriteString(GetVm(L)->name);
+    }
+
+    lua_pop_dll(api, L, 1);
+
+
     bool registered = false;
 
     // Register the script before dealing with errors, since the front end has enough
@@ -768,26 +789,6 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
         VMInitialize(api, L, vm);
     }
 
-    // Get the name of the VM. Polling like this is pretty excessive since the
-    // name won't change often, but it's the easiest way and works fine.
-
-    lua_rawgetglobal_dll(api, L, "decoda_name");
-    const char* name = lua_tostring_dll(api, L, -1);
-
-    if (name == NULL)
-    {
-        name = "";
-    }
-
-    if (name != vm->name)
-    {
-        vm->name = name;
-        m_eventChannel.WriteUInt32(EventId_NameVM);
-        m_eventChannel.WriteUInt32(reinterpret_cast<int>(L));
-        m_eventChannel.WriteString(vm->name);
-    }
-
-    lua_pop_dll(api, L, 1);
 
     // Log for debugging.
     //LogHookEvent(api, L, ar);
