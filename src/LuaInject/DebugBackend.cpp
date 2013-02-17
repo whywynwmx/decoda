@@ -1511,12 +1511,15 @@ int DebugBackend::ErrorHandler(unsigned long api, lua_State* L)
 
         // Send the exception event. Ignore the top of the stack when we send the
         // call stack since the top of the call stack is this function.
-
-        CriticalSectionLock lock(m_breakLock);
+        
+        m_breakLock.Enter();
 
         SendBreakEvent(api, L, 1);
         SendExceptionEvent(L, message);
         WaitForContinue();
+
+        //Exit the break lock now before we try to change the Lua hook otherwise we can get deadlocked waiting on the Lua hook lock
+        m_breakLock.Exit();
 
         //reenable the Lua hook if it was not active so the debugger can step
         CheckEnableLuaHook(api, L);
