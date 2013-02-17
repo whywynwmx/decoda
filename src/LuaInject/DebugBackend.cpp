@@ -423,12 +423,12 @@ void DebugBackend::DetachState(unsigned long api, lua_State* L)
 
 }
 
-int DebugBackend::PostLoadScript(unsigned long api, int result, lua_State* L, const char* source, size_t size, const char* name)
-{
+void DebugBackend::CheckVmName(unsigned long api, lua_State* L){
 
-    if (!GetIsAttached())
-    {
-        return result;
+    VirtualMachine* vm = GetVm(L);
+
+    if(!vm->name.empty()){
+      return;
     }
 
     // Get the name of the VM.
@@ -440,17 +440,27 @@ int DebugBackend::PostLoadScript(unsigned long api, int result, lua_State* L, co
         vmName = "";
     }
 
-    if (vmName != GetVm(L)->name)
+    if (vmName != vm->name)
     {
         CriticalSectionLock lock(m_criticalSection);
-        GetVm(L)->name = vmName;
+        vm->name = vmName;
         m_eventChannel.WriteUInt32(EventId_NameVM);
         m_eventChannel.WriteUInt32(reinterpret_cast<int>(L));
-        m_eventChannel.WriteString(GetVm(L)->name);
+        m_eventChannel.WriteString(vm->name);
+    }
+    
+    lua_pop_dll(api, L, 1);
+}
+
+int DebugBackend::PostLoadScript(unsigned long api, int result, lua_State* L, const char* source, size_t size, const char* name)
+{
+
+    if (!GetIsAttached())
+    {
+        return result;
     }
 
-    lua_pop_dll(api, L, 1);
-
+    CheckVmName(api, L);
 
     bool registered = false;
 

@@ -96,6 +96,11 @@ public:
     int PostLoadScript(unsigned long api, int result, lua_State* L, const char* source, size_t size, const char* name);
 
     /**
+     * Checks to see if decoda_name has been set and stores the name in the VirtualMachine for the state
+     */
+    void CheckVmName(unsigned long api, lua_State* L);
+
+    /**
      * Registers a script with the backend. This will tell track this source file
      * and send notification to the front end about it. If the script is already
      * loaded the method returns -1. The unavailable flag specifies that the code
