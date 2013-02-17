@@ -170,6 +170,7 @@ enum HookMode
 {
     HookMode_None,
     HookMode_CallsOnly,
+    HookMode_CallsAndReturns,
     HookMode_Full,
 };
 /**

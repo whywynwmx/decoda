@@ -224,6 +224,8 @@ public:
 
     void UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* hookEvent);
 
+    bool GetStackHasBreakpointedFunction(VirtualMachine* vm, lua_State* L);
+
     /**
      * Called when a new API is created.
      */

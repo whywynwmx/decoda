@@ -328,7 +328,7 @@ DebugBackend::VirtualMachine* DebugBackend::AttachState(unsigned long api, lua_S
     vm->stackTop            = 0;
     vm->luaJitWorkAround    = false;
     vm->haveActiveBreakpoints = false;
-    vm->hookMode = HookMode_None;
+    vm->hookMode = HookMode_Full; //Leave it to UpdateHookMode to downgrade this as needed
     
     m_vms.push_back(vm);
     m_stateToVm.insert(std::make_pair(L, vm));
@@ -704,6 +704,32 @@ void DebugBackend::VMInitialize(unsigned long api, lua_State* L, VirtualMachine*
     vm->initialized = true;
 }
 
+bool DebugBackend::GetStackHasBreakpointedFunction(VirtualMachine* vm, lua_State* L){
+    
+    lua_Debug functionInfo;
+
+    for(int stackIndex = 0; lua_getstack_dll(vm->api, L, stackIndex, &functionInfo) ;stackIndex++)
+    {
+        lua_getinfo_dll(vm->api, L, "S", &functionInfo);
+
+        if(functionInfo.linedefined == -1){
+          //ignore c functions
+          continue;
+        }
+        
+        vm->lastFunc = functionInfo.source;
+
+        int scriptIndex = GetScriptIndex(vm->lastFunc);
+        
+        if(scriptIndex != -1 && m_scripts[scriptIndex]->GetHasBreakPointInRange(functionInfo.linedefined, functionInfo.lastlinedefined))
+        {
+          return true;
+        }
+    }
+
+    return false;            
+}
+
 void DebugBackend::UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* hookEvent)
 {
     VirtualMachine* vm = GetVm(L);
@@ -711,36 +737,32 @@ void DebugBackend::UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* ho
 
     if(vm->haveActiveBreakpoints)
     {
-
-        if(hookEvent->event != LUA_HOOKCALL)
+        if(hookEvent->event == LUA_HOOKCALL)
         {
-          //LUA_HOOKRET and LUA_HOOKTAILRET both set the debug info to the function being exited were interested in the function that called it
-          if(lua_getstack_dll(api, L, 1, hookEvent))
-          {
-            lua_getinfo_dll(api, L, "S", hookEvent);
-          }
-          else
-          {
-            hookEvent->linedefined = -1;
-          }
+            if(hookEvent->linedefined != -1)
+            {
+                vm->lastFunc = hookEvent->source;
+                
+                int scriptIndex = GetScriptIndex(vm->lastFunc);
+                
+                if(scriptIndex == -1)
+                {
+                    RegisterChunk(L, hookEvent);
+                    scriptIndex = GetScriptIndex(vm->lastFunc);
+                }
+                
+                if(scriptIndex != -1 && m_scripts[scriptIndex]->GetHasBreakPointInRange(hookEvent->linedefined, hookEvent->lastlinedefined))
+                {
+                    mode = HookMode_Full;
+                }
+            }
         }
-         
-        if(hookEvent->linedefined != -1)
+        else
         {
-
-          vm->lastFunc = hookEvent->source;
-          
-          int scriptIndex = GetScriptIndex(vm->lastFunc);
-          
-          if(scriptIndex == -1)
+          //Aggressively scan the stack for Return and TailReturn hook events if we don't find anything we let the hook mode default back to just calls
+          if(m_mode == Mode_Continue && GetStackHasBreakpointedFunction(vm, L))
           {
-              RegisterChunk(L, hookEvent);
-              scriptIndex = GetScriptIndex(vm->lastFunc);
-          }
-          
-          if(scriptIndex != -1 && m_scripts[scriptIndex]->HasBreakpointsActive())
-          {
-              mode = HookMode_Full;
+            mode = HookMode_Full;
           }
         }
     }
@@ -750,7 +772,9 @@ void DebugBackend::UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* ho
         mode = HookMode_None;
     }
 
-    if(m_mode != Mode_Continue){
+    //Always switch to Full hook mode when stepping
+    if(m_mode != Mode_Continue)
+    {
       mode = HookMode_Full;
     }
 
@@ -761,7 +785,8 @@ void DebugBackend::UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* ho
     {
         m_HookLock.Enter();
         
-        if(m_mode != Mode_Continue){
+        if(m_mode != Mode_Continue)
+        {
           mode = HookMode_Full;
         }
 
@@ -903,6 +928,7 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
             }
         }
 
+        //Only try to update the hook mode when not stepping through code
         if(m_mode == Mode_Continue){
           UpdateHookMode(api, L, ar);
         }
