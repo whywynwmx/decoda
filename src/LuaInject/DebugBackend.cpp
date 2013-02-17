@@ -68,30 +68,49 @@ const char* MemoryReader(lua_State* L, void* data, size_t* size)
 
 bool DebugBackend::Script::GetHasBreakPoint(unsigned int line) const
 {
-    if (line < breakpoints.size())
+    
+    for (size_t i = 0; i < breakpoints.size(); i++)
     {
-        return breakpoints[line];
+      if(breakpoints[i] == line){
+        return true;
+      }
     }
+    
+    return false;
+}
+
+bool DebugBackend::Script::GetHasBreakPointInRange(unsigned int start, unsigned int end) const
+{
+    
+    for (size_t i = 0; i < breakpoints.size(); i++)
+    {
+      if(breakpoints[i] >= start && breakpoints[i] < end)
+      {
+        return true;
+      }
+    }
+    
     return false;
 }
 
 bool DebugBackend::Script::ToggleBreakpoint(unsigned int line)
 {
-    
-    if (breakpoints.size() < line + 1)
-    {
-        breakpoints.resize(line + 1, false);
-    }
-    
-    bool breakpointSet = !breakpoints[line];
-    breakpoints[line] = breakpointSet;
+  
+    std::vector<unsigned int>::iterator result =  std::find(breakpoints.begin(), breakpoints.end(), line);
 
-    return breakpointSet;
+    if(result == breakpoints.end())
+    {
+      breakpoints.push_back(line);
+      return true;
+    }else{
+      breakpoints.erase(result);
+      return false;
+    }
 }
 
 void DebugBackend::Script::ClearBreakpoints()
 {
-  breakpoints.resize(0);
+    breakpoints.resize(0);
 }
 
 bool DebugBackend::Script::HasBreakpointsActive()
