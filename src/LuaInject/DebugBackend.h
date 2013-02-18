@@ -39,6 +39,51 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 //
 
 class TiXmlNode;
+class DebugBackend;
+
+class VirtualMachine
+{
+public:
+    VirtualMachine(DebugBackend* owner, lua_State* l, int apiMode);
+    void Initialize();
+    void UpdateHookMode(lua_Debug* hookEvent);
+    void UpdateCallInfo(lua_Debug* hookEvent);
+    void SetLuaHookMode(HookMode mode);
+    
+    /**
+     * Returns whether any functions on the Lua call stack have breakpoint set in them
+     */
+    bool StackHasBreakpoint();
+    
+    /**
+     * Gets the number of functions on the Lua stack.
+     */
+    int GetStackDepth() const;
+
+    unsigned long   api;
+    lua_State*      L;
+    HANDLE          hThread;
+    DebugBackend*   owner;
+    
+    int             callCount;
+    int             callStackDepth;
+    unsigned int    stackTop;
+
+    std::string     lastFunc;
+    HookMode        hookMode;
+    std::string     name;
+    bool            initialized;
+    bool            luaJitWorkAround;
+    bool            haveActiveBreakpoints;
+    bool            breakpointInStack; 
+};
+
+enum Mode
+{
+    Mode_Continue,
+    Mode_StepOver,
+    Mode_StepInto,
+};
 
 /**
  * This class encapsulates the part of the debugger that runs inside the
@@ -46,10 +91,6 @@ class TiXmlNode;
  */
 class DebugBackend
 {
-
-private:
-
-    struct VirtualMachine;
 
 public:
 
@@ -108,6 +149,11 @@ public:
      * through a call other than the load function.
      */
     unsigned int RegisterScript(lua_State* L, const char* source, size_t size, const char* name, bool unavailable);
+    
+    /**
+     * Called every time an already registered script is loaded in the VM It may not of been loaded in this particular VM Through
+     */
+    void ExistingScriptLoadedInVm(lua_State* L, int scriptIndex);
 
     /**
      * Steps execution of a "broken" script by one line. If the current line
@@ -228,8 +274,6 @@ public:
     void HookCallback(unsigned long api, lua_State* L, lua_Debug* ar);
 
     void UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* hookEvent);
-
-    bool GetStackHasBreakpointedFunction(VirtualMachine* vm, lua_State* L);
 
     /**
      * Called when a new API is created.
@@ -398,12 +442,7 @@ private:
     static const int s_maxModuleNameLength = 32;
     static const int s_maxEntryNameLength  = 256;
 
-    enum Mode
-    {
-        Mode_Continue,
-        Mode_StepOver,
-        Mode_StepInto,
-    };
+
     
     struct Api
     {
@@ -419,21 +458,7 @@ private:
         std::string     name;
     };
 
-    struct VirtualMachine
-    {
-        lua_State*      L;
-        HANDLE          hThread;
-        bool            initialized;
-        int             callCount;
-        int             callStackDepth;
-        std::string     lastFunc;
-        HookMode        hookMode;
-        unsigned long   api;
-        std::string     name;
-        unsigned int    stackTop;
-        bool            luaJitWorkAround;
-        bool            haveActiveBreakpoints;
-    };
+
 
     struct StackEntry
     {
@@ -579,11 +604,6 @@ private:
     void MergeTables(unsigned long api, lua_State* L, unsigned int tableIndex1, unsigned int tableIndex2) const;
 
     /**
-     * Gets the number of functions on the Lua stack.
-     */
-    int GetStackDepth(unsigned long api, lua_State* L) const;
-
-    /**
      * Returns the virtual machine that corresponds to the specified Lua state.
      * If there isn't one, the method returns NULL.
      */
@@ -635,7 +655,7 @@ private:
     bool                            m_disableJIT;
     bool                            m_haveActiveBreakpoints;
     mutable bool                    m_warnedAboutUserData;
-
+    friend class VirtualMachine;
 };
 
 #endif

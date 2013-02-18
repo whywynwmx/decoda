@@ -296,7 +296,7 @@ bool DebugBackend::Initialize(HINSTANCE hInstance)
 
 }
 
-DebugBackend::VirtualMachine* DebugBackend::AttachState(unsigned long api, lua_State* L)
+VirtualMachine* DebugBackend::AttachState(unsigned long api, lua_State* L)
 {
 
     if (!GetIsAttached())
@@ -317,18 +317,7 @@ DebugBackend::VirtualMachine* DebugBackend::AttachState(unsigned long api, lua_S
         return stateIterator->second;
     }
 
-    VirtualMachine* vm = new VirtualMachine;
-
-    vm->L                   = L;
-    vm->hThread             = GetCurrentThread();
-    vm->initialized         = false;
-    vm->callCount           = 0;
-    vm->callStackDepth      = 0;
-    vm->api                 = api;
-    vm->stackTop            = 0;
-    vm->luaJitWorkAround    = false;
-    vm->haveActiveBreakpoints = false;
-    vm->hookMode = HookMode_Full; //Leave it to UpdateHookMode to downgrade this as needed
+    VirtualMachine* vm = new VirtualMachine(this, L, api);
     
     m_vms.push_back(vm);
     m_stateToVm.insert(std::make_pair(L, vm));
@@ -346,7 +335,7 @@ DebugBackend::VirtualMachine* DebugBackend::AttachState(unsigned long api, lua_S
     RegisterDebugLibrary(api, L);
 
     // Start debugging on this VM.
-    SetHookMode(api, L, HookMode_Full);
+    vm->SetLuaHookMode(HookMode_Full);
 
     // This state may be a thread which will be garbage collected, so we need to register
     // to recieve notification when it is destroyed.
@@ -545,6 +534,21 @@ int DebugBackend::PostLoadScript(unsigned long api, int result, lua_State* L, co
 
 }
 
+void DebugBackend::ExistingScriptLoadedInVm(lua_State* L, int scriptIndex){
+  
+  if(!m_scripts[scriptIndex]->HasBreakpointsActive()){
+    return;
+  }
+
+  VirtualMachine* vm = GetVm(L);
+  
+  //Switch off fast mode debugging if this is the first active breakpoint in this vm
+  if(!vm->haveActiveBreakpoints){
+    vm->haveActiveBreakpoints = true;
+    vm->SetLuaHookMode(HookMode_Full);
+  }
+}
+
 unsigned int DebugBackend::RegisterScript(lua_State* L, const char* source, size_t size, const char* name, bool unavailable)
 {
 
@@ -567,8 +571,11 @@ unsigned int DebugBackend::RegisterScript(lua_State* L, const char* source, size
     // Check that we haven't already assigned this script an index. That happens
     // if the same script is loaded twice by the application.
 
-    if (GetScriptIndex(name) != -1)
+    unsigned int scriptIndex = GetScriptIndex(name);
+
+    if (scriptIndex != -1)
     {
+        ExistingScriptLoadedInVm(L, scriptIndex);
         if (freeName)
         {
             delete [] name;
@@ -597,6 +604,7 @@ unsigned int DebugBackend::RegisterScript(lua_State* L, const char* source, size
                     delete [] name;
                     name = NULL;
                 }
+                ExistingScriptLoadedInVm(L, i);
                 return -1;
             }
         }
@@ -611,7 +619,7 @@ unsigned int DebugBackend::RegisterScript(lua_State* L, const char* source, size
         script->source = std::string(source, size);
     }
     
-    unsigned int scriptIndex = m_scripts.size();
+    scriptIndex = m_scripts.size();
     m_scripts.push_back(script);
 
     m_nameToScript.insert(std::make_pair(name, scriptIndex));
@@ -686,59 +694,7 @@ void DebugBackend::Message(const char* message, MessageType type)
     m_eventChannel.Flush();
 }
 
-void DebugBackend::VMInitialize(unsigned long api, lua_State* L, VirtualMachine* vm){
 
-    // Check if we need to use the LuaJIT work around for the debug API.   
-    lua_rawgetglobal_dll(api, L, "jit");
-    int jitTable = lua_gettop_dll(api, L);
-    
-    if (!lua_isnil_dll(api, L, -1))
-    {
-        
-        lua_pushstring_dll(api, L, "version_num");
-        lua_gettable_dll(api, L, jitTable);
-    
-        int version = lua_tointeger_dll(api, L, -1);
-        if (version >= 20000)
-        {
-            vm->luaJitWorkAround = true;
-            Message("Warning 1009: Enabling LuaJIT C call return work-around", MessageType_Warning);
-        }
-    
-        lua_pop_dll(api, L, 1);
-    
-    }
-    
-    lua_pop_dll(api, L, 1);
-    
-    vm->initialized = true;
-}
-
-bool DebugBackend::GetStackHasBreakpointedFunction(VirtualMachine* vm, lua_State* L){
-    
-    lua_Debug functionInfo;
-
-    for(int stackIndex = 0; lua_getstack_dll(vm->api, L, stackIndex, &functionInfo) ;stackIndex++)
-    {
-        lua_getinfo_dll(vm->api, L, "S", &functionInfo);
-
-        if(functionInfo.linedefined == -1){
-          //ignore c functions
-          continue;
-        }
-        
-        vm->lastFunc = functionInfo.source;
-
-        int scriptIndex = GetScriptIndex(vm->lastFunc);
-        
-        if(scriptIndex != -1 && m_scripts[scriptIndex]->GetHasBreakPointInRange(functionInfo.linedefined, functionInfo.lastlinedefined))
-        {
-          return true;
-        }
-    }
-
-    return false;            
-}
 
 void DebugBackend::UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* hookEvent)
 {
@@ -747,33 +703,23 @@ void DebugBackend::UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* ho
 
     if(vm->haveActiveBreakpoints)
     {
-        if(hookEvent->event == LUA_HOOKCALL)
+        if(hookEvent->event == LUA_HOOKCALL && hookEvent->linedefined != -1)
         {
-            if(hookEvent->linedefined != -1)
+            vm->lastFunc = hookEvent->source;
+            
+            int scriptIndex = GetScriptIndex(vm->lastFunc);
+            
+            if(scriptIndex == -1)
             {
-                vm->lastFunc = hookEvent->source;
-                
-                int scriptIndex = GetScriptIndex(vm->lastFunc);
-                
-                if(scriptIndex == -1)
-                {
-                    RegisterChunk(L, hookEvent);
-                    scriptIndex = GetScriptIndex(vm->lastFunc);
-                }
-                
-                if(scriptIndex != -1 && m_scripts[scriptIndex]->GetHasBreakPointInRange(hookEvent->linedefined, hookEvent->lastlinedefined))
-                {
-                    mode = HookMode_Full;
-                }
+                RegisterChunk(L, hookEvent);
+                scriptIndex = GetScriptIndex(vm->lastFunc);
             }
-        }
-        else
-        {
-          //Aggressively scan the stack for Return and TailReturn hook events if we don't find anything we let the hook mode default back to just calls
-          if(m_mode == Mode_Continue && GetStackHasBreakpointedFunction(vm, L))
-          {
-            mode = HookMode_Full;
-          }
+            
+            if(scriptIndex != -1 && m_scripts[scriptIndex]->GetHasBreakPointInRange(hookEvent->linedefined, hookEvent->lastlinedefined))
+            {
+                mode = HookMode_Full;
+                vm->breakpointInStack = true;
+            }
         }
     }
     else
@@ -782,26 +728,32 @@ void DebugBackend::UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* ho
         mode = HookMode_None;
     }
 
-    //Always switch to Full hook mode when stepping
-    if(m_mode != Mode_Continue)
+    //keep the hook in Full mode while theres a function in the stack somewhere that has a breakpoint in it
+    if(mode != HookMode_Full && vm->breakpointInStack)
     {
-      mode = HookMode_Full;
+      if(vm->StackHasBreakpoint())
+      {
+          mode = HookMode_Full;
+      }
+      else
+      {
+          vm->breakpointInStack = false;
+      }
     }
 
     HookMode currentMode = GetHookMode(api, L);
-    assert(currentMode == vm->hookMode);
 
-    if(mode != vm->hookMode)
+    if(mode != vm->hookMode || currentMode != mode)
     {
         m_HookLock.Enter();
         
+        //Always switch to Full hook mode when stepping
         if(m_mode != Mode_Continue)
         {
           mode = HookMode_Full;
         }
 
-        vm->hookMode = mode;
-        SetHookMode(api, L, mode);
+        vm->SetLuaHookMode(mode);
 
         m_HookLock.Exit();
     }
@@ -840,7 +792,7 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
     {
         // We do this initialization work here since we check for things that
         // are registered after the state is created.
-        VMInitialize(api, L, vm);
+        vm->Initialize();
     }
 
 
@@ -850,21 +802,13 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
     if (ar->event == LUA_HOOKLINE)
     {
 
-        // Fill in the rest of the structure.
-        lua_getinfo_dll(api, L, "Sl", ar);
-
-        unsigned int scriptIndex = GetScriptIndex(ar->source);
-
-        bool stop = false;
-
         // If we're stepping on each line or we just stepped out of a function that
         // we were stepping over, break.
-
         if (vm->luaJitWorkAround)
         {
             if (m_mode == Mode_StepOver && vm->callStackDepth > 0)
             {
-                if (GetStackDepth(api, L) < vm->callStackDepth)
+                if (vm->GetStackDepth() < vm->callStackDepth)
                 {
                     // We've returned to the level when the function was called.
                     vm->callCount       = 0;   
@@ -872,6 +816,14 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
                 }
             }
         }
+        
+        // Fill in the rest of the structure.
+        lua_getinfo_dll(api, L, "Sl", ar);
+
+
+        unsigned int scriptIndex = GetScriptIndex(ar->source);
+
+        bool stop = false;
 
         if (m_mode == Mode_StepInto || (m_mode == Mode_StepOver && vm->callCount == 0))
         {
@@ -910,33 +862,7 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
     {
         lua_getinfo_dll(api, L, "S", ar);
 
-        if (ar->event == LUA_HOOKRET || ar->event == LUA_HOOKTAILRET)
-        {
-            if (m_mode == Mode_StepOver && vm->callCount > 0)
-            {
-                --vm->callCount;
-            }
-        }
-        else if (ar->event == LUA_HOOKCALL)
-        {
-            if (m_mode == Mode_StepOver)
-            {
-
-                ++vm->callCount;
-
-                // LuaJIT doesn't give us LUA_HOOKRET calls when we exit from
-                // C functions, so instead we use the stack depth.
-                if (vm->luaJitWorkAround && vm->callStackDepth == 0)
-                {
-                    
-                    if (ar->what != NULL && ar->what[0] == 'C')
-                    {
-                        vm->callStackDepth = GetStackDepth(api, L);
-                    }
-                }
-
-            }
-        }
+        vm->UpdateCallInfo(ar);
 
         //Only try to update the hook mode when not stepping through code
         if(m_mode == Mode_Continue){
@@ -944,7 +870,6 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
         }
         
         m_criticalSection.Exit(); 
-    
     }
 
 }
@@ -1030,7 +955,7 @@ void DebugBackend::CommandThreadProc()
 
             for (unsigned int i = 0; i < m_vms.size(); ++i)
             {
-              SetHookMode(m_vms[i]->api, m_vms[i]->L, HookMode_None);
+              m_vms[i]->SetLuaHookMode(HookMode_None);
             }
 
             // Signal that we're detached.
@@ -1166,9 +1091,7 @@ void DebugBackend::ActiveLuaHookInAllVms()
 
     for (StateToVmMap::iterator it = m_stateToVm.begin(); it != end; it++)
     {
-      VirtualMachine* vm = it->second;
-      //May have issues with L not being the currently running thread
-      SetHookMode(vm->api, vm->L, HookMode_Full);
+      it->second->SetLuaHookMode(HookMode_Full);
     }
 
     m_HookLock.Exit();
@@ -1312,8 +1235,7 @@ void DebugBackend::SetHaveActiveBreakpoints(bool breakpointsActive){
       if(breakpointsActive)
       {
         //Just set it to full and let UpdateHookMode downgrade it to HookMode_CallsOnly if needed
-        vm->hookMode = HookMode_Full;
-        SetHookMode(vm->api, vm->L, HookMode_Full);
+        vm->SetLuaHookMode(HookMode_Full);
       }
     }
   
@@ -1494,7 +1416,7 @@ void DebugBackend::CheckEnableLuaHook(unsigned long api, lua_State* L)
   m_HookLock.Enter();
 
   if((m_mode == Mode_StepOver || m_mode == Mode_StepInto)){
-    SetHookMode(api, L, HookMode_Full);
+    GetVm(L)->SetLuaHookMode(HookMode_Full);
   }else{
     SetHookMode(api, L, GetVm(L)->hookMode);
   }
@@ -3130,22 +3052,7 @@ unsigned int DebugBackend::GetCStack(HANDLE hThread, StackEntry stack[], unsigne
 
 }
 
-int DebugBackend::GetStackDepth(unsigned long api, lua_State* L) const
-{
-
-    lua_Debug ar;
-
-    int level = 0;
-    while (lua_getstack_dll(api, L, level, &ar))
-    {
-        ++level;
-    }
-
-    return level;
-
-}
-
-DebugBackend::VirtualMachine* DebugBackend::GetVm(lua_State* L)
+VirtualMachine* DebugBackend::GetVm(lua_State* L)
 {
 
     StateToVmMap::iterator stateIterator = m_stateToVm.find(L);
@@ -3232,3 +3139,125 @@ unsigned int DebugBackend::GetUnifiedStack(const StackEntry nativeStack[], unsig
 
 }
 
+VirtualMachine::VirtualMachine(DebugBackend* owner, lua_State* l, int apiMode)
+  : owner(owner), L(l), api(apiMode), callCount(0), callStackDepth(0), stackTop(0), initialized(false), haveActiveBreakpoints(false),
+    luaJitWorkAround(false), hookMode(HookMode_Full), breakpointInStack(false){
+
+   hThread = GetCurrentThread();
+}
+
+void VirtualMachine::SetLuaHookMode(HookMode mode){
+    hookMode = mode;
+    SetHookMode(api, L, mode);
+}
+
+void VirtualMachine::Initialize(){
+
+    // Check if we need to use the LuaJIT work around for the debug API.   
+    lua_rawgetglobal_dll(api, L, "jit");
+    int jitTable = lua_gettop_dll(api, L);
+
+    if (!lua_isnil_dll(api, L, -1))
+    {
+
+        lua_pushstring_dll(api, L, "version_num");
+        lua_gettable_dll(api, L, jitTable);
+
+        int version = lua_tointeger_dll(api, L, -1);
+        if (version >= 20000)
+        {
+            luaJitWorkAround = true;
+            owner->Message("Warning 1009: Enabling LuaJIT C call return work-around", MessageType_Warning);
+        }
+
+        lua_pop_dll(api, L, 1);
+
+    }
+
+    lua_pop_dll(api, L, 1);
+
+    initialized = true;
+}
+
+void VirtualMachine::UpdateCallInfo(lua_Debug* ar){
+    
+    if(owner->m_mode != Mode_StepOver)
+    {
+      return;
+    }
+
+    if(ar->event == LUA_HOOKLINE)
+    {
+        if(luaJitWorkAround && callStackDepth > 0)
+        {
+          if (GetStackDepth() < callStackDepth)
+          {
+              // We've returned to the level when the function was called.
+              callCount       = 0;   
+              callStackDepth  = 0;
+          }
+        }
+    }
+    else if (ar->event == LUA_HOOKRET || ar->event == LUA_HOOKTAILRET)
+    {
+        if (callCount > 0)
+        {
+            --callCount;
+        }
+    }
+    else if (ar->event == LUA_HOOKCALL)
+    {
+          ++callCount;
+          
+          // LuaJIT doesn't give us LUA_HOOKRET calls when we exit from
+          // C functions, so instead we use the stack depth.
+          if (luaJitWorkAround && callStackDepth == 0)
+          {
+              
+              if (ar->what != NULL && ar->what[0] == 'C')
+              {
+                  callStackDepth = GetStackDepth();
+              }
+          }
+    }
+}
+
+int VirtualMachine::GetStackDepth() const
+{
+
+    lua_Debug ar;
+
+    int level = 0;
+    while (lua_getstack_dll(api, L, level, &ar))
+    {
+        ++level;
+    }
+
+    return level;
+}
+
+bool VirtualMachine::StackHasBreakpoint(){
+    
+    lua_Debug functionInfo;
+
+    for(int stackIndex = 0; lua_getstack_dll(api, L, stackIndex, &functionInfo) ;stackIndex++)
+    {
+        lua_getinfo_dll(api, L, "S", &functionInfo);
+
+        if(functionInfo.linedefined == -1){
+          //ignore c functions
+          continue;
+        }
+        
+        lastFunc = functionInfo.source;
+
+        int scriptIndex = owner->GetScriptIndex(lastFunc);
+        
+        if(scriptIndex != -1 && owner->m_scripts[scriptIndex]->GetHasBreakPointInRange(functionInfo.linedefined, functionInfo.lastlinedefined))
+        {
+          return true;
+        }
+    }
+
+    return false;            
+}
