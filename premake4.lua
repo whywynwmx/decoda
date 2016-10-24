@@ -18,6 +18,7 @@ project "Frontend"
 	flags { "WinMain" }
     location "build"
     language "C++"
+    defines { "DEDICATED_PRODUCT_VERSION" }
     files {
 		"src/Frontend/*.h",
 		"src/Frontend/*.cpp",
