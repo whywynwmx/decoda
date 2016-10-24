@@ -86,6 +86,7 @@ project "LuaInject"
     kind "SharedLib"
     location "build"
     language "C++"
+    flags { "Symbols" }
 	defines { "TIXML_USE_STL" }
     files {
 		"src/LuaInject/*.h",
@@ -108,7 +109,6 @@ project "LuaInject"
 
     configuration "Debug"
         defines { "DEBUG" }
-        flags { "Symbols" }
         targetdir "bin/debug"
 		links { "tinyxmld_STL" }
 
@@ -122,6 +122,7 @@ project "Shared"
     kind "StaticLib"
     location "build"
     language "C++"
+    flags { "Symbols" }
     files {
 		"src/Shared/*.h",
 		"src/Shared/*.cpp",
@@ -135,7 +136,6 @@ project "Shared"
 
     configuration "Debug"
         defines { "DEBUG" }
-        flags { "Symbols" }
         targetdir "bin/debug"
 
     configuration "Release"
