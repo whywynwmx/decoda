@@ -42,7 +42,6 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include "SystemSettings.h"
 #include "SourceControl.h"
 #include "FileChangeWatcher.h"
-#include "Updater.h"
 #include "StringHistory.h"
 #include "AutoCompleteManager.h"
 #include "DebugFrontend.h"
@@ -753,11 +752,6 @@ public:
      */
     void OnShowHelp(wxCommandEvent& event);
 
-    /**
-     * Called when information about updates has been retrieved from the server.
-     */
-    void OnUpdateInfo(wxCommandEvent& event);
-
     /** 
      * Called when the symbols for a file are finished being parsed.
      */
@@ -856,12 +850,6 @@ public:
      * From wxWindow.
      */
     virtual bool MSWProcessMessage(WXMSG* pMsg);
-
-    /**
-     * Talks to the mothership to see if there's an updated version of the
-     * application available. This is done asynchronously.
-     */
-    void CheckForUpdate();
 
     /**
      * Moves the window and shows it based on the saved window placement.
@@ -1269,13 +1257,7 @@ private:
      * Updates the read-only status of the currently open document's editor.
      */
     void UpdateDocumentReadOnlyStatus();
-
-    /**
-     * Callback used to notify the application when information about updates
-     * available is ready.
-     */
-    static void UpdateCallback(Updater* updater, void* param);
-    
+   
     /**
      * Handles applying an update if one is available. If no update is available
      * the method does nothing.
@@ -1457,8 +1439,6 @@ private:
     static const char*              s_updateUrl;
  
     int                             m_openFilesMessage;
-
-    Updater                         m_updater;
 
     Project*                        m_project;       
     std::vector<OpenFile*>          m_openFiles;
