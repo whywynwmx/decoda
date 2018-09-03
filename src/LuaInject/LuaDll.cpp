@@ -35,8 +35,8 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include <malloc.h>
 #include <assert.h>
 #include <set>
-#include <hash_map>
-#include <hash_set>
+#include <unordered_map>
+#include <unordered_set>
 
 // Macro for convenient pointer addition.
 // Essentially treats the last two parameters as DWORDs.  The first
@@ -442,10 +442,10 @@ std::set<std::string>           g_loadedModules;
 CriticalSection                 g_loadedModulesCriticalSection;
 
 std::vector<LuaInterface>       g_interfaces;
-stdext::hash_map<void*, void*>  g_hookedFunctionMap;
+std::unordered_map<void*, void*>  g_hookedFunctionMap;
 
-stdext::hash_set<std::string>   g_warnedAboutLua;   // Indivates that we've warned the module contains Lua functions but none were loaded.
-stdext::hash_set<std::string>   g_warnedAboutPdb;   // Indicates that we've warned about a module having a mismatched PDB.
+std::unordered_set<std::string>   g_warnedAboutLua;   // Indivates that we've warned the module contains Lua functions but none were loaded.
+std::unordered_set<std::string>   g_warnedAboutPdb;   // Indicates that we've warned about a module having a mismatched PDB.
 bool                            g_warnedAboutThreads = false;
 bool                            g_warnedAboutJit     = false;
 
@@ -3155,12 +3155,12 @@ std::string GetApplicationDirectory()
 
 }
 
-bool LoadLuaFunctions(const stdext::hash_map<std::string, DWORD64>& symbols, HANDLE hProcess)
+bool LoadLuaFunctions(const std::unordered_map<std::string, DWORD64>& symbols, HANDLE hProcess)
 {
 
     #define GET_FUNCTION_OPTIONAL(function)                                                                                     \
         {                                                                                                                       \
-            stdext::hash_map<std::string, DWORD64>::const_iterator iterator = symbols.find(#function);                          \
+            std::unordered_map<std::string, DWORD64>::const_iterator iterator = symbols.find(#function);                          \
             if (iterator != symbols.end())                                                                                      \
             {                                                                                                                   \
                 luaInterface.function##_dll_cdecl = reinterpret_cast<function##_cdecl_t>(iterator->second);                     \
@@ -3578,7 +3578,7 @@ bool LocateSymbolFile(const IMAGEHLP_MODULE64& moduleInfo, char fileName[_MAX_PA
 BOOL CALLBACK GatherSymbolsCallback(PSYMBOL_INFO pSymInfo, ULONG SymbolSize, PVOID UserContext)
 {
     
-    stdext::hash_map<std::string, DWORD64>* symbols = reinterpret_cast<stdext::hash_map<std::string, DWORD64>*>(UserContext);
+    std::unordered_map<std::string, DWORD64>* symbols = reinterpret_cast<std::unordered_map<std::string, DWORD64>*>(UserContext);
 
     if (pSymInfo != NULL && pSymInfo->Name != NULL)
     {
@@ -3625,7 +3625,7 @@ bool ScanForSignature(DWORD64 start, DWORD64 length, const char* signature)
 
 }
 
-void LoadSymbolsRecursively(std::set<std::string>& loadedModules, stdext::hash_map<std::string, DWORD64>& symbols, HANDLE hProcess, HMODULE hModule)
+void LoadSymbolsRecursively(std::set<std::string>& loadedModules, std::unordered_map<std::string, DWORD64>& symbols, HANDLE hProcess, HMODULE hModule)
 {
 
     assert(hModule != NULL);
@@ -3834,7 +3834,7 @@ void PostLoadLibrary(HMODULE hModule)
         //SymSetOptions(SYMOPT_DEBUG);
 
         std::set<std::string> loadedModules;
-        stdext::hash_map<std::string, DWORD64> symbols;
+        std::unordered_map<std::string, DWORD64> symbols;
 
         LoadSymbolsRecursively(loadedModules, symbols, hProcess, hModule);
 
