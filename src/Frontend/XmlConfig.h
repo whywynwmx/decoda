@@ -106,6 +106,12 @@ private:
     wxString    m_path;
     wxXmlNode*  m_pathNode;
 
+
+    // Inherited via wxConfigBase
+    virtual bool DoReadBinary(const wxString & key, wxMemoryBuffer * buf) const override;
+
+    virtual bool DoWriteBinary(const wxString & key, const wxMemoryBuffer & buf) override;
+
 };
 
 #endif

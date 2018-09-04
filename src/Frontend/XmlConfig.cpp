@@ -305,3 +305,13 @@ wxXmlNode* XmlConfig::GetGroupNode(const wxArrayString& parts) const
     return node;
 
 }
+
+bool XmlConfig::DoReadBinary(const wxString & key, wxMemoryBuffer * buf) const
+{
+  return false;
+}
+
+bool XmlConfig::DoWriteBinary(const wxString & key, const wxMemoryBuffer & buf)
+{
+  return false;
+}
