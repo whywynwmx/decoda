@@ -35,7 +35,7 @@ NewFileDialog::NewFileDialog( wxWindow* parent, bool enableSourceControl )
     : wxDialog( parent, wxID_ANY, wxT("Add New File"), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER )
 {
 
-    wxGridSizer* sizer = new wxGridSizer(1, 1);
+    wxGridSizer* sizer = new wxGridSizer(1, 1, 1, 1);
 	
 	wxFlexGridSizer* fgSizer1;
 	fgSizer1 = new wxFlexGridSizer( 1, 1, 0, 0 );
