@@ -31,9 +31,9 @@
 namespace wxcode {
 #endif
 
-class WXDLLEXPORT wxTreeListItem;
-class WXDLLEXPORT wxTreeListHeaderWindow;
-class WXDLLEXPORT wxTreeListMainWindow;
+class wxTreeListItem;
+class wxTreeListHeaderWindow;
+class wxTreeListMainWindow;
 
 #define wxTR_COLUMN_LINES 0x1000 // put border around items
 #define wxTR_VIRTUAL      0x4000 // The application provides items text on demand.
@@ -55,7 +55,7 @@ enum {
     DEFAULT_COL_WIDTH = 100
 };
 
-class WXDLLEXPORT wxTreeListColumnInfo: public wxObject {
+class wxTreeListColumnInfo: public wxObject {
 
 public:
     wxTreeListColumnInfo (const wxString &text = wxEmptyString,
@@ -135,10 +135,10 @@ const int wxTL_MODE_FIND_NOCASE  = 0x0020;
 
 // additional flag for HitTest
 const int wxTREE_HITTEST_ONITEMCOLUMN = 0x2000;
-extern WXDLLEXPORT const wxChar* wxTreeListCtrlNameStr;
+extern const wxChar* wxTreeListCtrlNameStr;
 
 
-class WXDLLEXPORT wxTreeListCtrl : public wxControl
+class wxTreeListCtrl : public wxControl
 {
 friend class wxTreeListHeaderWindow;
 friend class wxTreeListMainWindow;
@@ -510,10 +510,10 @@ public:
     // Start editing the item label: this (temporarily) replaces the item
     // with a one line edit control. The item will be selected if it hadn't
     // been before.
-    void EditLabel (const wxTreeItemId& item)
-        { EditLabel (item, GetMainColumn()); }
+    void EditLabel (const wxTreeItemId& item, const wxString& initText = "")
+        { EditLabel (item, GetMainColumn(), initText); }
     // edit item's label of the given column
-    void EditLabel (const wxTreeItemId& item, int column);
+    void EditLabel (const wxTreeItemId& item, int column, const wxString& initText);
     void EndEdit(bool isCancelled);
 
     // virtual mode
@@ -575,7 +575,7 @@ private:
 
 #if wxUSE_XRC
 
-class WXDLLIMPEXP_XRC wxTreeListCtrlXmlHandler : public wxXmlResourceHandler {
+class wxTreeListCtrlXmlHandler : public wxXmlResourceHandler {
 	DECLARE_DYNAMIC_CLASS(wxTreeListCtrlXmlHandler)
 public:
 	wxTreeListCtrlXmlHandler();

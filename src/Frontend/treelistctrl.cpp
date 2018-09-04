@@ -575,7 +575,7 @@ public:
     // Start editing the item label: this (temporarily) replaces the item
     // with a one line edit control. The item will be selected if it hadn't
     // been before.
-    void EditLabel (const wxTreeItemId& item, int column);
+    void EditLabel (const wxTreeItemId& item, int column, const wxString& initText = "");
     void EndEdit(bool isCancelled);
 
     // sorting
@@ -4068,7 +4068,7 @@ bool wxTreeListMainWindow::GetBoundingRect (const wxTreeItemId& itemId, wxRect& 
 
 /* **** */
 
-void wxTreeListMainWindow::EditLabel (const wxTreeItemId& item, int column) {
+void wxTreeListMainWindow::EditLabel (const wxTreeItemId& item, int column, const wxString& initText) {
 
 // validate
     if (!item.IsOk()) return;
@@ -4121,17 +4121,24 @@ void wxTreeListMainWindow::EditLabel (const wxTreeItemId& item, int column) {
     PrepareDC (dc);
     x = dc.LogicalToDeviceX (x);
     y = dc.LogicalToDeviceY (y);
+    
+    wxString text = m_editItem->GetText (column);
 
 // now do edit (change state, show control)
     m_editCol = column;  // only used in OnRenameAccept()
     m_editControl = new wxEditTextCtrl (this, -1, &m_editAccept, &m_editRes,
                                                this, m_editItem->GetText (column),
                                                wxPoint (x, y), wxSize (w, h), style);
+    if (!initText.empty()) {
+      m_editControl->SetValue(initText);
+    }
+
+    m_editControl->SetInsertionPointEnd();
     m_editControl->SetFocus();
 }
 
 void wxTreeListMainWindow::OnRenameTimer() {
-    EditLabel (m_curItem, GetCurrentColumn());
+    EditLabel (m_curItem, GetCurrentColumn(), "");
 }
 
 void wxTreeListMainWindow::OnRenameAccept(bool isCancelled) {
@@ -5171,8 +5178,8 @@ bool wxTreeListCtrl::GetBoundingRect(const wxTreeItemId& item, wxRect& rect,
                                      bool textOnly) const
 { return m_main_win->GetBoundingRect(item, rect, textOnly); }
 
-void wxTreeListCtrl::EditLabel (const wxTreeItemId& item, int column)
-    { m_main_win->EditLabel (item, column); }
+void wxTreeListCtrl::EditLabel (const wxTreeItemId& item, int column, const wxString& initText)
+    { m_main_win->EditLabel (item, column, initText); }
 void wxTreeListCtrl::EndEdit(bool isCancelled)
     { m_main_win->EndEdit(isCancelled); }
 
