@@ -20,6 +20,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+#include <algorithm>
 #include "LineMapper.h"
 #include "Tokenizer.h"
 
