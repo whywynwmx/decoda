@@ -39,7 +39,8 @@ project "Frontend"
 		"rpcrt4",
 		"imagehlp",
 		"Update",
-		"Shared",		
+		"Shared",
+        "tinyxml"
 	}
 
     configuration "Debug"
@@ -98,7 +99,6 @@ project "LuaInject"
 		"libs/dbghlp/include",
 	}
 	libdirs {
-		"libs/tinyxml/lib",
 		"libs/dbghlp/lib",
 	}
     links {
@@ -110,13 +110,13 @@ project "LuaInject"
         defines { "DEBUG" }
         flags { "Symbols" }
         targetdir "bin/debug"
-		links { "tinyxmld_STL" }
+		links { "tinyxmld" }
 
     configuration "Release"
         defines { "NDEBUG" }
         flags { "Optimize" }
         targetdir "bin/release"				
-		links { "tinyxml_STL" }
+		links { "tinyxml" }
 		
 project "Shared"
     kind "StaticLib"
@@ -141,5 +141,29 @@ project "Shared"
     configuration "Release"
         defines { "NDEBUG" }
         flags { "Optimize" }
-        targetdir "bin/release"		
-		
+        targetdir "bin/release"
+
+project "tinyxml"
+    kind "StaticLib"
+    location "build"
+    language "C++"
+    defines {"_LIB", "TIXML_USE_STL" }
+    files {
+		"libs/tinyxml/src/tinystr.cpp",
+		"libs/tinyxml/src/tinyxml.cpp",
+        "libs/tinyxml/src/tinyxmlparser.cpp",
+        "libs/tinyxml/src/tinyxmlerror.cpp",
+	}		
+    includedirs {
+	}
+    configuration "Debug"
+        targetname "tinyxmld"
+        targetdir "bin/debug"
+        defines { "DEBUG" }
+        flags { "Symbols" }
+
+    configuration "Release"
+        targetname "tinyxml"
+        targetdir "bin/release"
+        defines { "NDEBUG" }
+        flags { "Optimize" }
