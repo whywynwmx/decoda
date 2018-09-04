@@ -4077,7 +4077,7 @@ bool MainFrame::SaveProject(bool promptForName)
 
     if (fileName.empty() || promptForName)
     {
-        fileName = wxFileSelector("Save Project", "", "", "", "Decoda Project files (*.deproj)|*.deproj|All files (*.*)|*.*", wxSAVE, this);
+        fileName = wxSaveFileSelector("Save Project", "Decoda Project files (*.deproj)|*.deproj|All files (*.*)|*.*", "", this);
     }
 
     if (!fileName.empty())
@@ -4480,8 +4480,7 @@ bool MainFrame::SaveFile(OpenFile* file, bool promptForName)
 
         wxString p = fileName.GetPath();
 
-        fullPath = wxFileSelector(_("Save As"), fileName.GetPath(),
-            file->file->GetDisplayName(), "", s_scriptExtensions, wxSAVE, this);
+        fullPath = wxSaveFileSelector(_("Save As"), s_scriptExtensions, fileName.GetPath(), this);
 
         if (fullPath.IsEmpty())
         {
