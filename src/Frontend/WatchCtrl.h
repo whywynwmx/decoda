@@ -25,6 +25,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <wx/wx.h>
 #include "treelistctrl.h"
+using namespace wxcode;
 
 //
 // Forward declarations.
