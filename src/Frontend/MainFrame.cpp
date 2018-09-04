@@ -81,7 +81,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 
 
 // Event used to communicate when the update data has been downloaded.
-DECLARE_EVENT_TYPE(wxEVT_UPDATE_INFO_EVENT, -1)
+DECLARE_LOCAL_EVENT_TYPE(wxEVT_UPDATE_INFO_EVENT, -1)
 DEFINE_EVENT_TYPE(wxEVT_UPDATE_INFO_EVENT)
 
 BEGIN_EVENT_TABLE(MainFrame, wxFrame)

@@ -37,7 +37,7 @@ class Symbol;
 // Event definitions.
 //
 
-DECLARE_EVENT_TYPE(wxEVT_SYMBOL_PARSER_EVENT, -1)
+DECLARE_LOCAL_EVENT_TYPE(wxEVT_SYMBOL_PARSER_EVENT, -1)
 
 /**
  * Class for events sent by the symbol parser thread. This doesn't really handle

@@ -32,7 +32,7 @@ typedef unsigned long long VMHandle;
 // Event definitions.
 //
 
-DECLARE_EVENT_TYPE(wxEVT_DEBUG_EVENT, -1)
+DECLARE_LOCAL_EVENT_TYPE(wxEVT_DEBUG_EVENT, -1)
 
 /**
  * Event class used to pass information from the debug server to the

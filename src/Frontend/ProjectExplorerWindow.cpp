@@ -36,7 +36,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include "res/explorer.xpm"
 #include "res/filter_bitmap.xpm"
 
-DECLARE_EVENT_TYPE( wxEVT_TREE_CONTEXT_MENU, -1 )
+DECLARE_LOCAL_EVENT_TYPE( wxEVT_TREE_CONTEXT_MENU, -1 )
 
 typedef void (wxEvtHandler::*wxTreeContextMenuEvent)(wxTreeEvent&);
 

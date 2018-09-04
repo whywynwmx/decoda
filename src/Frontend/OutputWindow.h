@@ -99,7 +99,7 @@ private:
 
 };
 
-DECLARE_EVENT_TYPE(wxEVT_OUTPUT_KEY_DOWN, -1)
+DECLARE_LOCAL_EVENT_TYPE(wxEVT_OUTPUT_KEY_DOWN, -1)
 
 typedef void (wxEvtHandler::*wxOutputKeyDownEventFunction)(wxKeyEvent&);
 

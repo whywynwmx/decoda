@@ -31,7 +31,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 // Event definitions.
 //
 
-DECLARE_EVENT_TYPE(wxEVT_FILE_EVENT, -1)
+DECLARE_LOCAL_EVENT_TYPE(wxEVT_FILE_EVENT, -1)
 
 /**
  * File event class.
