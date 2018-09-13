@@ -310,7 +310,7 @@ bool ProjectExplorerWindow::MatchesFilter(const wxString& string, const wxString
 
         for (unsigned int i = 0; i < filter.Length(); ++i)
         {
-            if (tolower(string[i]) != filter[i])
+            if (tolower(string[i]) != filter[i].GetValue())
             {
                 return false;
             }
@@ -346,12 +346,12 @@ void ProjectExplorerWindow::AddFile(wxTreeItemId parent, Project::File* file)
         {
 
             std::unordered_map<std::string, wxTreeItemId>::const_iterator iterator;
-            iterator = groups.find(file->symbols[i]->module.ToAscii());
+            iterator = groups.find(std::string(file->symbols[i]->module.ToAscii()));
 
             if (iterator == groups.end())
             {
                 node = m_tree->AppendItem(fileNode, file->symbols[i]->module, Image_Module, Image_Module);
-                groups.insert(std::make_pair(file->symbols[i]->module.ToAscii(), node));
+                groups.insert(std::make_pair(std::string(file->symbols[i]->module.ToAscii()), node));
             }
             else
             {

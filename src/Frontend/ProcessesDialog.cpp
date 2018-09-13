@@ -228,7 +228,7 @@ int ProcessesDialog::SortCompareFunction(long item1, long item2, long sortData)
 
     if (self->m_sortColumn == 0)
     {
-        result = strcmp(self->m_processes[item1].name.c_str(), self->m_processes[item2].name.c_str());
+        result = wcscmp(self->m_processes[item1].name.c_str(), self->m_processes[item2].name.c_str());
     }
     else if (self->m_sortColumn == 1)
     {
@@ -243,7 +243,7 @@ int ProcessesDialog::SortCompareFunction(long item1, long item2, long sortData)
     }
     else if (self->m_sortColumn == 2)
     {
-        result = strcmp(self->m_processes[item1].title.c_str(), self->m_processes[item2].title.c_str());
+        result = wcscmp(self->m_processes[item1].title.c_str(), self->m_processes[item2].title.c_str());
     }
 
     if (!self->m_sortForward)

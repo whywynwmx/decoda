@@ -81,6 +81,8 @@ public:
      */
     bool WriteString(const std::string& value);
 
+    bool WriteWString(const std::wstring & value);
+
     /**
      * Writes a boolean to the channel and returns immediately.
      */
@@ -97,6 +99,8 @@ public:
      * data is available.
      */
     bool ReadString(std::string& value);
+
+    bool ReadWString(std::wstring & value);
 
     /**
      * Reads a boolean from the channel. This operation blocks until the

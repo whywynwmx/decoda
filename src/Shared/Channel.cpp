@@ -201,6 +201,18 @@ bool Channel::WriteString(const std::string& value)
     return true;
 }
 
+bool Channel::WriteWString(const std::wstring& value)
+{
+  unsigned int length = value.length();
+  if (!WriteUInt32(length)) {
+    return false;
+  }
+  if (length > 0) {
+    return Write(value.c_str(), length*2);
+  }
+  return true;
+}
+
 bool Channel::WriteBool(bool value)
 {
     return WriteUInt32(value ? 1 : 0);
@@ -250,6 +262,37 @@ bool Channel::ReadString(std::string& value)
     }
 
     return true;
+
+}
+
+bool Channel::ReadWString(std::wstring& value)
+{
+
+  unsigned int length;
+
+  if (!ReadUInt32(length)) {
+    return false;
+  }
+
+  if (length != 0) {
+
+    wchar_t* buffer = new wchar_t[length + 1];
+
+    if (!Read(buffer, length)) {
+      delete[] buffer;
+      return false;
+    }
+
+    buffer[length] = 0;
+    value = buffer;
+
+    delete[] buffer;
+
+  } else {
+    value.clear();
+  }
+
+  return true;
 
 }
 

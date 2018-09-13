@@ -294,7 +294,7 @@ wxString GetExecutablePath()
     {
 #ifdef __WXMSW__
 
-        char buf[512];
+        wchar_t buf[512];
         *buf = '\0';
         GetModuleFileName(NULL, buf, 511);
         path = wxPathOnly(buf);
@@ -1944,7 +1944,7 @@ void MainFrame::OnDebugEvent(wxDebugEvent& event)
             }
             else if (result == ExceptionDialog::ID_IgnoreAlways)
             {
-                DebugFrontend::Get().IgnoreException(event.GetMessage().ToAscii());
+                DebugFrontend::Get().IgnoreException(event.GetMessage().ToStdString());
                 DebugFrontend::Get().Continue(m_vm);
                 UpdateForNewState();
             }
@@ -5724,9 +5724,9 @@ bool MainFrame::MSWProcessMessage(WXMSG* pMsg)
 
 wxString MainFrame::GetAppDataDirectory() const
 {
-    TCHAR path[_MAX_PATH];
+    wchar_t path[_MAX_PATH];
     SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, SHGFP_TYPE_CURRENT, path);
-    strcat(path, "\\Decoda\\");
+    wcscat(path, L"\\Decoda\\");
     return path;
 }
 
