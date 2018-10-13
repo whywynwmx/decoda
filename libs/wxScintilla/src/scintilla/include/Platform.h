@@ -3,7 +3,7 @@
  ** Interface to platform facilities. Also includes some basic utilities.
  ** Implemented in PlatGTK.cxx for GTK+/Linux, PlatWin.cxx for Windows, and PlatWX.cxx for wxWindows.
  **/
-// Copyright 1998-2003 by Neil Hodgson <neilh@scintilla.org>
+// Copyright 1998-2009 by Neil Hodgson <neilh@scintilla.org>
 // The License.txt file describes the conditions under which this software may be distributed.
 
 #ifndef PLATFORM_H
@@ -13,13 +13,18 @@
 // PLAT_GTK_WIN32 is defined additionally when running PLAT_GTK under Win32
 // PLAT_WIN = Win32 API on Win32 OS
 // PLAT_WX is wxWindows on any supported platform
+// PLAT_TK = Tcl/TK on Linux or Win32
 
 #define PLAT_GTK 0
 #define PLAT_GTK_WIN32 0
+#define PLAT_GTK_MACOSX 0
 #define PLAT_MACOSX 0
 #define PLAT_WIN 0
-#define PLAT_WX  1
+#define PLAT_WX  0
+#define PLAT_QT 0
 #define PLAT_FOX 0
+#define PLAT_CURSES 0
+#define PLAT_TK 0
 
 #if defined(FOX)
 #undef PLAT_FOX
@@ -28,6 +33,18 @@
 #elif defined(__WX__)
 #undef PLAT_WX
 #define PLAT_WX  1
+
+#elif defined(CURSES)
+#undef PLAT_CURSES
+#define PLAT_CURSES 1
+
+#elif defined(SCINTILLA_QT)
+#undef PLAT_QT
+#define PLAT_QT 1
+
+#elif defined(TK)
+#undef PLAT_TK
+#define PLAT_TK 1
 
 #elif defined(GTK)
 #undef PLAT_GTK
@@ -38,7 +55,13 @@
 #define PLAT_GTK_WIN32 1
 #endif
 
-#elif defined(MACOSX)
+#if defined(__APPLE__)
+#undef PLAT_GTK_MACOSX
+#define PLAT_GTK_MACOSX 1
+#endif
+
+#elif defined(__APPLE__)
+
 #undef PLAT_MACOSX
 #define PLAT_MACOSX 1
 
@@ -51,6 +74,12 @@
 #ifdef SCI_NAMESPACE
 namespace Scintilla {
 #endif
+
+typedef float XYPOSITION;
+typedef double XYACCUMULATOR;
+inline int RoundXYPosition(XYPOSITION xyPos) {
+	return int(xyPos + 0.5);
+}
 
 // Underlying the implementation of the platform classes are platform specific types.
 // Sometimes these need to be passed around by client code so they are defined here
@@ -65,14 +94,18 @@ typedef void *IdlerID;
 
 /**
  * A geometric point class.
- * Point is exactly the same as the Win32 POINT and GTK+ GdkPoint so can be used interchangeably.
+ * Point is similar to the Win32 POINT and GTK+ GdkPoint types.
  */
 class Point {
 public:
-	int x;
-	int y;
+	XYPOSITION x;
+	XYPOSITION y;
 
-	explicit Point(int x_=0, int y_=0) : x(x_), y(y_) {
+	explicit Point(XYPOSITION x_=0, XYPOSITION y_=0) : x(x_), y(y_) {
+	}
+
+	static Point FromInts(int x_, int y_) {
+		return Point(static_cast<XYPOSITION>(x_), static_cast<XYPOSITION>(y_));
 	}
 
 	// Other automatically defined methods (assignment, copy constructor, destructor) are fine
@@ -82,62 +115,60 @@ public:
 
 /**
  * A geometric rectangle class.
- * PRectangle is exactly the same as the Win32 RECT so can be used interchangeably.
+ * PRectangle is similar to the Win32 RECT.
  * PRectangles contain their top and left sides, but not their right and bottom sides.
  */
 class PRectangle {
 public:
-	int left;
-	int top;
-	int right;
-	int bottom;
+	XYPOSITION left;
+	XYPOSITION top;
+	XYPOSITION right;
+	XYPOSITION bottom;
 
-	PRectangle(int left_=0, int top_=0, int right_=0, int bottom_ = 0) :
+	explicit PRectangle(XYPOSITION left_=0, XYPOSITION top_=0, XYPOSITION right_=0, XYPOSITION bottom_ = 0) :
 		left(left_), top(top_), right(right_), bottom(bottom_) {
+	}
+
+	static PRectangle FromInts(int left_, int top_, int right_, int bottom_) {
+		return PRectangle(static_cast<XYPOSITION>(left_), static_cast<XYPOSITION>(top_),
+			static_cast<XYPOSITION>(right_), static_cast<XYPOSITION>(bottom_));
 	}
 
 	// Other automatically defined methods (assignment, copy constructor, destructor) are fine
 
-	bool operator==(PRectangle &rc) {
+	bool operator==(PRectangle &rc) const {
 		return (rc.left == left) && (rc.right == right) &&
 			(rc.top == top) && (rc.bottom == bottom);
 	}
-	bool Contains(Point pt) {
+	bool Contains(Point pt) const {
 		return (pt.x >= left) && (pt.x <= right) &&
 			(pt.y >= top) && (pt.y <= bottom);
 	}
-	bool Contains(PRectangle rc) {
+	bool ContainsWholePixel(Point pt) const {
+		// Does the rectangle contain all of the pixel to left/below the point
+		return (pt.x >= left) && ((pt.x+1) <= right) &&
+			(pt.y >= top) && ((pt.y+1) <= bottom);
+	}
+	bool Contains(PRectangle rc) const {
 		return (rc.left >= left) && (rc.right <= right) &&
 			(rc.top >= top) && (rc.bottom <= bottom);
 	}
-	bool Intersects(PRectangle other) {
+	bool Intersects(PRectangle other) const {
 		return (right > other.left) && (left < other.right) &&
 			(bottom > other.top) && (top < other.bottom);
 	}
-	void Move(int xDelta, int yDelta) {
+	void Move(XYPOSITION xDelta, XYPOSITION yDelta) {
 		left += xDelta;
 		top += yDelta;
 		right += xDelta;
 		bottom += yDelta;
 	}
-	int Width() { return right - left; }
-	int Height() { return bottom - top; }
-	bool Empty() {
+	XYPOSITION Width() const { return right - left; }
+	XYPOSITION Height() const { return bottom - top; }
+	bool Empty() const {
 		return (Height() <= 0) || (Width() <= 0);
 	}
 };
-
-/**
- * In some circumstances, including Win32 in paletted mode and GTK+, each colour
- * must be allocated before use. The desired colours are held in the ColourDesired class,
- * and after allocation the allocation entry is stored in the ColourAllocated class. In other
- * circumstances, such as Win32 in true colour mode, the allocation process just copies
- * the RGB values from the desired to the allocated class.
- * As each desired colour requires allocation before it can be used, the ColourPair class
- * holds both a ColourDesired and a ColourAllocated
- * The Palette class is responsible for managing the palette of colours which contains a
- * list of ColourPair objects and performs the allocation.
- */
 
 /**
  * Holds a desired RGB colour.
@@ -190,118 +221,71 @@ public:
 		return co;
 	}
 
-	unsigned int GetRed() {
+	unsigned int GetRed() const {
 		return co & 0xff;
 	}
 
-	unsigned int GetGreen() {
+	unsigned int GetGreen() const {
 		return (co >> 8) & 0xff;
 	}
 
-	unsigned int GetBlue() {
+	unsigned int GetBlue() const {
 		return (co >> 16) & 0xff;
 	}
 };
 
 /**
- * Holds an allocated RGB colour which may be an approximation to the desired colour.
- */
-class ColourAllocated {
-	long coAllocated;
-
-public:
-
-	ColourAllocated(long lcol=0) {
-		coAllocated = lcol;
-	}
-
-	void Set(long lcol) {
-		coAllocated = lcol;
-	}
-
-	long AsLong() const {
-		return coAllocated;
-	}
-};
-
-/**
- * Colour pairs hold a desired colour and an allocated colour.
- */
-struct ColourPair {
-	ColourDesired desired;
-	ColourAllocated allocated;
-
-	ColourPair(ColourDesired desired_=ColourDesired(0,0,0)) {
-		desired = desired_;
-		allocated.Set(desired.AsLong());
-	}
-	void Copy() {
-		allocated.Set(desired.AsLong());
-	}
-};
-
-class Window;	// Forward declaration for Palette
-
-/**
- * Colour palette management.
- */
-class Palette {
-	int used;
-	int size;
-	ColourPair *entries;
-#if PLAT_GTK
-	void *allocatedPalette; // GdkColor *
-	int allocatedLen;
-#endif
-	// Private so Palette objects can not be copied
-	Palette(const Palette &) {}
-	Palette &operator=(const Palette &) { return *this; }
-public:
-#if PLAT_WIN
-	void *hpal;
-#endif
-	bool allowRealization;
-
-	Palette();
-	~Palette();
-
-	void Release();
-
-	/**
-	 * This method either adds a colour to the list of wanted colours (want==true)
-	 * or retrieves the allocated colour back to the ColourPair.
-	 * This is one method to make it easier to keep the code for wanting and retrieving in sync.
-	 */
-	void WantFind(ColourPair &cp, bool want);
-
-	void Allocate(Window &w);
-};
-
-/**
  * Font management.
  */
+
+struct FontParameters {
+	const char *faceName;
+	float size;
+	int weight;
+	bool italic;
+	int extraFontFlag;
+	int technology;
+	int characterSet;
+
+	FontParameters(
+		const char *faceName_,
+		float size_=10,
+		int weight_=400,
+		bool italic_=false,
+		int extraFontFlag_=0,
+		int technology_=0,
+		int characterSet_=0) :
+
+		faceName(faceName_),
+		size(size_),
+		weight(weight_),
+		italic(italic_),
+		extraFontFlag(extraFontFlag_),
+		technology(technology_),
+		characterSet(characterSet_)
+	{
+	}
+
+};
+
 class Font {
 protected:
-	FontID id;
-#if PLAT_WX
-	int ascent;
-#endif
+	FontID fid;
 	// Private so Font objects can not be copied
-	Font(const Font &) {}
-	Font &operator=(const Font &) { id=0; return *this; }
+	Font(const Font &);
+	Font &operator=(const Font &);
 public:
 	Font();
 	virtual ~Font();
 
-	virtual void Create(const char *faceName, int characterSet, int size,
-		bool bold, bool italic, bool extraFontFlag=false);
+	virtual void Create(const FontParameters &fp);
 	virtual void Release();
 
-	FontID GetID() { return id; }
+	FontID GetID() { return fid; }
 	// Alias another font - caller guarantees not to Release
-	void SetID(FontID id_) { id = id_; }
+	void SetID(FontID fid_) { fid = fid_; }
 	friend class Surface;
-        friend class SurfaceImpl;
+	friend class SurfaceImpl;
 };
 
 /**
@@ -313,9 +297,9 @@ private:
 	Surface(const Surface &) {}
 	Surface &operator=(const Surface &) { return *this; }
 public:
-	Surface() {};
-	virtual ~Surface() {};
-	static Surface *Allocate();
+	Surface() {}
+	virtual ~Surface() {}
+	static Surface *Allocate(int technology);
 
 	virtual void Init(WindowID wid)=0;
 	virtual void Init(SurfaceID sid, WindowID wid)=0;
@@ -323,35 +307,35 @@ public:
 
 	virtual void Release()=0;
 	virtual bool Initialised()=0;
-	virtual void PenColour(ColourAllocated fore)=0;
+	virtual void PenColour(ColourDesired fore)=0;
 	virtual int LogPixelsY()=0;
 	virtual int DeviceHeightFont(int points)=0;
 	virtual void MoveTo(int x_, int y_)=0;
 	virtual void LineTo(int x_, int y_)=0;
-	virtual void Polygon(Point *pts, int npts, ColourAllocated fore, ColourAllocated back)=0;
-	virtual void RectangleDraw(PRectangle rc, ColourAllocated fore, ColourAllocated back)=0;
-	virtual void FillRectangle(PRectangle rc, ColourAllocated back)=0;
+	virtual void Polygon(Point *pts, int npts, ColourDesired fore, ColourDesired back)=0;
+	virtual void RectangleDraw(PRectangle rc, ColourDesired fore, ColourDesired back)=0;
+	virtual void FillRectangle(PRectangle rc, ColourDesired back)=0;
 	virtual void FillRectangle(PRectangle rc, Surface &surfacePattern)=0;
-	virtual void RoundedRectangle(PRectangle rc, ColourAllocated fore, ColourAllocated back)=0;
-	virtual void AlphaRectangle(PRectangle rc, int cornerSize, ColourAllocated fill, int alphaFill,
-		ColourAllocated outline, int alphaOutline, int flags)=0;
-	virtual void Ellipse(PRectangle rc, ColourAllocated fore, ColourAllocated back)=0;
+	virtual void RoundedRectangle(PRectangle rc, ColourDesired fore, ColourDesired back)=0;
+	virtual void AlphaRectangle(PRectangle rc, int cornerSize, ColourDesired fill, int alphaFill,
+		ColourDesired outline, int alphaOutline, int flags)=0;
+	virtual void DrawRGBAImage(PRectangle rc, int width, int height, const unsigned char *pixelsImage) = 0;
+	virtual void Ellipse(PRectangle rc, ColourDesired fore, ColourDesired back)=0;
 	virtual void Copy(PRectangle rc, Point from, Surface &surfaceSource)=0;
 
-	virtual void DrawTextNoClip(PRectangle rc, Font &font_, int ybase, const char *s, int len, ColourAllocated fore, ColourAllocated back)=0;
-	virtual void DrawTextClipped(PRectangle rc, Font &font_, int ybase, const char *s, int len, ColourAllocated fore, ColourAllocated back)=0;
-	virtual void DrawTextTransparent(PRectangle rc, Font &font_, int ybase, const char *s, int len, ColourAllocated fore)=0;
-	virtual void MeasureWidths(Font &font_, const char *s, int len, int *positions)=0;
-	virtual int WidthText(Font &font_, const char *s, int len)=0;
-	virtual int WidthChar(Font &font_, char ch)=0;
-	virtual int Ascent(Font &font_)=0;
-	virtual int Descent(Font &font_)=0;
-	virtual int InternalLeading(Font &font_)=0;
-	virtual int ExternalLeading(Font &font_)=0;
-	virtual int Height(Font &font_)=0;
-	virtual int AverageCharWidth(Font &font_)=0;
+	virtual void DrawTextNoClip(PRectangle rc, Font &font_, XYPOSITION ybase, const char *s, int len, ColourDesired fore, ColourDesired back)=0;
+	virtual void DrawTextClipped(PRectangle rc, Font &font_, XYPOSITION ybase, const char *s, int len, ColourDesired fore, ColourDesired back)=0;
+	virtual void DrawTextTransparent(PRectangle rc, Font &font_, XYPOSITION ybase, const char *s, int len, ColourDesired fore)=0;
+	virtual void MeasureWidths(Font &font_, const char *s, int len, XYPOSITION *positions)=0;
+	virtual XYPOSITION WidthText(Font &font_, const char *s, int len)=0;
+	virtual XYPOSITION WidthChar(Font &font_, char ch)=0;
+	virtual XYPOSITION Ascent(Font &font_)=0;
+	virtual XYPOSITION Descent(Font &font_)=0;
+	virtual XYPOSITION InternalLeading(Font &font_)=0;
+	virtual XYPOSITION ExternalLeading(Font &font_)=0;
+	virtual XYPOSITION Height(Font &font_)=0;
+	virtual XYPOSITION AverageCharWidth(Font &font_)=0;
 
-	virtual int SetPalette(Palette *pal, bool inBackGround)=0;
 	virtual void SetClip(PRectangle rc)=0;
 	virtual void FlushCachedState()=0;
 
@@ -370,31 +354,19 @@ typedef void (*CallBackAction)(void*);
  */
 class Window {
 protected:
-	WindowID id;
-#if PLAT_MACOSX
-	void *windowRef;
-	void *control;
-#endif
+	WindowID wid;
 public:
-	Window() : id(0), cursorLast(cursorInvalid) {
-#if PLAT_MACOSX
-	  windowRef = 0;
-	  control = 0;
-#endif
+	Window() : wid(0), cursorLast(cursorInvalid) {
 	}
-	Window(const Window &source) : id(source.id), cursorLast(cursorInvalid) {
-#if PLAT_MACOSX
-	  windowRef = 0;
-	  control = 0;
-#endif
+	Window(const Window &source) : wid(source.wid), cursorLast(cursorInvalid) {
 	}
 	virtual ~Window();
-	Window &operator=(WindowID id_) {
-		id = id_;
+	Window &operator=(WindowID wid_) {
+		wid = wid_;
 		return *this;
 	}
-	WindowID GetID() const { return id; }
-	bool Created() const { return id != 0; }
+	WindowID GetID() const { return wid; }
+	bool Created() const { return wid != 0; }
 	void Destroy();
 	bool HasFocus();
 	PRectangle GetPosition();
@@ -409,10 +381,6 @@ public:
 	void SetCursor(Cursor curs);
 	void SetTitle(const char *s);
 	PRectangle GetMonitorRect(Point pt);
-#if PLAT_MACOSX
-	void SetWindow(void *ref) { windowRef = ref; };
-	void SetControl(void *_control) { control = _control; };
-#endif
 private:
 	Cursor cursorLast;
 };
@@ -428,7 +396,7 @@ public:
 	static ListBox *Allocate();
 
 	virtual void SetFont(Font &font)=0;
-	virtual void Create(Window &parent, int ctrlID, Point location, int lineHeight_, bool unicodeMode_)=0;
+	virtual void Create(Window &parent, int ctrlID, Point location, int lineHeight_, bool unicodeMode_, int technology_)=0;
 	virtual void SetAverageCharWidth(int width)=0;
 	virtual void SetVisibleRows(int rows)=0;
 	virtual int GetVisibleRows() const=0;
@@ -442,6 +410,7 @@ public:
 	virtual int Find(const char *prefix)=0;
 	virtual void GetValue(int n, char *value, int len)=0;
 	virtual void RegisterImage(int type, const char *xpm_data)=0;
+	virtual void RegisterRGBAImage(int type, int width, int height, const unsigned char *pixelsImage) = 0;
 	virtual void ClearRegisteredImages()=0;
 	virtual void SetDoubleClickAction(CallBackAction, void *)=0;
 	virtual void SetList(const char* list, char separator, char typesep)=0;
@@ -451,10 +420,10 @@ public:
  * Menu management.
  */
 class Menu {
-	MenuID id;
+	MenuID mid;
 public:
 	Menu();
-	MenuID GetID() { return id; }
+	MenuID GetID() { return mid; }
 	void CreatePopUp();
 	void Destroy();
 	void Show(Point pt, Window &w);
@@ -473,7 +442,7 @@ public:
  */
 class DynamicLibrary {
 public:
-	virtual ~DynamicLibrary() {};
+	virtual ~DynamicLibrary() {}
 
 	/// @return Pointer to function "name", or NULL on failure.
 	virtual Function FindFunction(const char *name) = 0;
@@ -484,6 +453,16 @@ public:
 	/// @return An instance of a DynamicLibrary subclass with "modulePath" loaded.
 	static DynamicLibrary *Load(const char *modulePath);
 };
+
+#if defined(__clang__)
+# if __has_feature(attribute_analyzer_noreturn)
+#  define CLANG_ANALYZER_NORETURN __attribute__((analyzer_noreturn))
+# else
+#  define CLANG_ANALYZER_NORETURN
+# endif
+#else
+# define CLANG_ANALYZER_NORETURN
+#endif
 
 /**
  * Platform class used to retrieve system wide parameters such as double click speed
@@ -529,7 +508,7 @@ public:
 	}
 	static void DebugPrintf(const char *format, ...);
 	static bool ShowAssertionPopUps(bool assertionPopUps_);
-	static void Assert(const char *c, const char *file, int line);
+	static void Assert(const char *c, const char *file, int line) CLANG_ANALYZER_NORETURN;
 	static int Clamp(int val, int minVal, int maxVal);
 };
 
@@ -545,11 +524,6 @@ public:
 
 #ifdef SCI_NAMESPACE
 }
-#endif
-
-// Shut up annoying Visual C++ warnings:
-#ifdef _MSC_VER
-#pragma warning(disable: 4244 4309 4514 4710)
 #endif
 
 #endif

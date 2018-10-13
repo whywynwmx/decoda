@@ -246,14 +246,14 @@ BEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_LIST_ITEM_ACTIVATED(ID_CallStack,           MainFrame::OnCallStackDoubleClick)
     EVT_LIST_ITEM_ACTIVATED(ID_VmList,              MainFrame::OnVmListDoubleClick)
     
-    EVT_SCI_DWELLSTART(wxID_ANY,                    MainFrame::OnCodeEditDwellStart)
-    EVT_SCI_DWELLEND(wxID_ANY,                      MainFrame::OnCodeEditDwellEnd)
-    EVT_SCI_SAVEPOINTLEFT(wxID_ANY,                 MainFrame::OnCodeEditSavePointLeft)
-    EVT_SCI_SAVEPOINTREACHED(wxID_ANY,              MainFrame::OnCodeEditSavePointReached)
-    EVT_SCI_UPDATEUI(wxID_ANY,                      MainFrame::OnCodeEditUpdateUI)
-    EVT_SCI_MARGINCLICK(wxID_ANY,                   MainFrame::OnCodeEditMarginClick)
-    EVT_SCI_ROMODIFYATTEMPT(wxID_ANY,               MainFrame::OnCodeEditReadOnlyModifyAttempt)
-    EVT_SCI_MODIFIED(wxID_ANY,                      MainFrame::OnCodeEditModified)
+    EVT_STC_DWELLSTART(wxID_ANY,                    MainFrame::OnCodeEditDwellStart)
+    EVT_STC_DWELLEND(wxID_ANY,                      MainFrame::OnCodeEditDwellEnd)
+    EVT_STC_SAVEPOINTLEFT(wxID_ANY,                 MainFrame::OnCodeEditSavePointLeft)
+    EVT_STC_SAVEPOINTREACHED(wxID_ANY,              MainFrame::OnCodeEditSavePointReached)
+    EVT_STC_UPDATEUI(wxID_ANY,                      MainFrame::OnCodeEditUpdateUI)
+    EVT_STC_MARGINCLICK(wxID_ANY,                   MainFrame::OnCodeEditMarginClick)
+    EVT_STC_ROMODIFYATTEMPT(wxID_ANY,               MainFrame::OnCodeEditReadOnlyModifyAttempt)
+    EVT_STC_MODIFIED(wxID_ANY,                      MainFrame::OnCodeEditModified)
     
     EVT_IDLE(                                       MainFrame::OnIdle)
     EVT_TIMER(wxID_ANY,                             MainFrame::OnTimer)
@@ -2270,7 +2270,7 @@ void MainFrame::OnVmListDoubleClick(wxListEvent& event)
     SetContext(m_vms[selectedItem], 0);
 }
 
-void MainFrame::OnCodeEditDwellStart(wxScintillaEvent& event)
+void MainFrame::OnCodeEditDwellStart(wxStyledTextEvent& event)
 {
 
     CodeEdit* edit = static_cast<CodeEdit*>(event.GetEventObject());
@@ -2336,13 +2336,13 @@ void MainFrame::OnCodeEditDwellStart(wxScintillaEvent& event)
 
 }
 
-void MainFrame::OnCodeEditDwellEnd(wxScintillaEvent& event)
+void MainFrame::OnCodeEditDwellEnd(wxStyledTextEvent& event)
 {
     CodeEdit* edit = static_cast<CodeEdit*>(event.GetEventObject());
     edit->HideToolTip();
 }
 
-void MainFrame::OnCodeEditSavePointLeft(wxScintillaEvent& event)
+void MainFrame::OnCodeEditSavePointLeft(wxStyledTextEvent& event)
 {
     for (unsigned int page = 0; page < m_openFiles.size(); ++page)
     {
@@ -2353,7 +2353,7 @@ void MainFrame::OnCodeEditSavePointLeft(wxScintillaEvent& event)
     }
 }
 
-void MainFrame::OnCodeEditSavePointReached(wxScintillaEvent& event)
+void MainFrame::OnCodeEditSavePointReached(wxStyledTextEvent& event)
 {
     for (unsigned int page = 0; page < m_openFiles.size(); ++page)
     {
@@ -2364,12 +2364,12 @@ void MainFrame::OnCodeEditSavePointReached(wxScintillaEvent& event)
     }
 }
 
-void MainFrame::OnCodeEditUpdateUI(wxScintillaEvent& event)
+void MainFrame::OnCodeEditUpdateUI(wxStyledTextEvent& event)
 {
     UpdateStatusBarLineAndColumn();
 }
 
-void MainFrame::OnCodeEditMarginClick(wxScintillaEvent& event)
+void MainFrame::OnCodeEditMarginClick(wxStyledTextEvent& event)
 {
 
     // Toggle a break point.
@@ -2450,7 +2450,7 @@ void MainFrame::UpdateLineMappingIfNecessary(Project::File* file)
 
 }
 
-void MainFrame::OnCodeEditReadOnlyModifyAttempt(wxScintillaEvent& event)
+void MainFrame::OnCodeEditReadOnlyModifyAttempt(wxStyledTextEvent& event)
 {
 
     // Show a message indicating the file is ready only.
@@ -2516,7 +2516,7 @@ void MainFrame::OnCodeEditReadOnlyModifyAttempt(wxScintillaEvent& event)
 
 }
 
-void MainFrame::OnCodeEditModified(wxScintillaEvent& event)
+void MainFrame::OnCodeEditModified(wxStyledTextEvent& event)
 {
 
     int linesAdded = event.GetLinesAdded();
@@ -3081,7 +3081,7 @@ bool MainFrame::ParseLuacErrorMessage(const wxString& error, wxString& fileName,
 
 }
 
-unsigned int MainFrame::GetScriptIndex(wxScintilla* edit) const
+unsigned int MainFrame::GetScriptIndex(wxStyledTextCtrl* edit) const
 {
     for (unsigned int i = 0; i < m_openFiles.size(); ++i)
     {
@@ -3471,12 +3471,12 @@ void MainFrame::OnFindReplace(wxFindDialogEvent& event)
 
         if (event.GetFlags() & wxFR_WHOLEWORD)
         {
-            flags |= wxSCI_FIND_WHOLEWORD;
+            flags |= wxSTC_FIND_WHOLEWORD;
         }
 
         if (event.GetFlags() & wxFR_MATCHCASE)
         {
-            flags |= wxSCI_FIND_MATCHCASE;
+            flags |= wxSTC_FIND_MATCHCASE;
         }
 
         int searchStart = file->edit->GetSelectionStart();
@@ -3517,12 +3517,12 @@ void MainFrame::OnFindReplaceAll(wxFindDialogEvent& event)
 
         if (event.GetFlags() & wxFR_WHOLEWORD)
         {
-            flags |= wxSCI_FIND_WHOLEWORD;
+            flags |= wxSTC_FIND_WHOLEWORD;
         }
 
         if (event.GetFlags() & wxFR_MATCHCASE)
         {
-            flags |= wxSCI_FIND_MATCHCASE;
+            flags |= wxSTC_FIND_MATCHCASE;
         }
 
         int replaces = 0;
@@ -3600,12 +3600,12 @@ void MainFrame::FindText(OpenFile* file, const wxString& text, int flags)
 
     if (flags & wxFR_WHOLEWORD)
     {
-        f |= wxSCI_FIND_WHOLEWORD;
+        f |= wxSTC_FIND_WHOLEWORD;
     }
 
     if (flags & wxFR_MATCHCASE)
     {
-        f |= wxSCI_FIND_MATCHCASE;
+        f |= wxSTC_FIND_MATCHCASE;
     }
 
     if (!(flags & wxFR_DOWN))
@@ -5179,7 +5179,7 @@ void MainFrame::ReloadFile(OpenFile* file)
     editor.LoadFile(file->file->fileName.GetFullPath());
     file->timeStamp = GetFileModifiedTime(file->file->fileName.GetFullPath());
 
-    editor.SetModEventMask(wxSCI_MODEVENTMASKALL);
+    editor.SetModEventMask(wxSTC_MODEVENTMASKALL);
     
     unsigned int newLineCount = editor.GetLineCount();
     
@@ -5482,7 +5482,7 @@ void MainFrame::EnableWhenFileHasFocus(wxUpdateUIEvent& event)
     
     int pageIndex = GetSelectedPage();
 
-    if (pageIndex != -1 && m_openFiles[pageIndex]->edit->GetSCIFocus())
+    if (pageIndex != -1 && m_openFiles[pageIndex]->edit->GetSTCFocus())
     {
         event.Enable(true);
     }
@@ -5500,7 +5500,7 @@ void MainFrame::EnableWhenTextIsSelected(wxUpdateUIEvent& event)
 
     int pageIndex = GetSelectedPage();
 
-    if (pageIndex != -1 && m_openFiles[pageIndex]->edit->GetSCIFocus())
+    if (pageIndex != -1 && m_openFiles[pageIndex]->edit->GetSTCFocus())
     {
         int length = m_openFiles[pageIndex]->edit->GetSelectionEnd() - m_openFiles[pageIndex]->edit->GetSelectionStart();
         selected = length > 0;
