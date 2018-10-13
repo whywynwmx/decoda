@@ -103,13 +103,16 @@ project "LuaInject"
 		"libs/LuaPlus/include",
 		"libs/tinyxml/include",
 		"libs/dbghlp/include",
+        "libs/Detours/include",
 	}
 	libdirs {
 		"libs/dbghlp/lib",
+        "libs/Detours/lib",
 	}
     links {
 		"Shared",
-		"psapi"
+		"psapi",
+        "detours.lib",
 	}
 
     configuration "Debug"
