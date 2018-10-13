@@ -1,10 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        joystick.h
+// Name:        wx/msw/joystick.h
 // Purpose:     wxJoystick class
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: joystick.h 35650 2005-09-23 12:56:45Z MR $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -14,20 +13,25 @@
 
 #include "wx/event.h"
 
+class wxJoystickThread;
+
 class WXDLLIMPEXP_ADV wxJoystick: public wxObject
 {
-  DECLARE_DYNAMIC_CLASS(wxJoystick)
- public:
+  wxDECLARE_DYNAMIC_CLASS(wxJoystick);
+public:
   /*
    * Public interface
    */
 
   wxJoystick(int joystick = wxJOYSTICK1);
+  virtual ~wxJoystick();
 
   // Attributes
   ////////////////////////////////////////////////////////////////////////////
 
   wxPoint GetPosition(void) const;
+  int GetPosition(unsigned axis) const;
+  bool GetButtonState(unsigned button) const;
   int GetZPosition(void) const;
   int GetButtonState(void) const;
   int GetPOVPosition(void) const;
@@ -83,7 +87,8 @@ class WXDLLIMPEXP_ADV wxJoystick: public wxObject
   bool ReleaseCapture(void);
 
 protected:
-  int       m_joystick;
+  int                   m_joystick;
+  wxJoystickThread*     m_thread;
 };
 
 #endif

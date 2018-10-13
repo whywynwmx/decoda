@@ -4,7 +4,6 @@
 // Author:      Jaakko Salli
 // Modified by:
 // Created:     Apr-30-2006
-// RCS-ID:      $Id: combo.cpp 62929 2009-12-18 17:03:06Z JMS $
 // Copyright:   (c) 2005 Jaakko Salli
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -38,40 +37,11 @@
 #include "wx/combo.h"
 
 #include "wx/msw/registry.h"
-
-#if wxUSE_UXTHEME
 #include "wx/msw/uxtheme.h"
-#endif
-
-// Change to #if 1 to include tmschema.h for easier testing of theme
-// parameters.
-#if 0
-    #include <tmschema.h>
-#else
-    //----------------------------------
-    #define EP_EDITTEXT         1
-    #define ETS_NORMAL          1
-    #define ETS_HOT             2
-    #define ETS_SELECTED        3
-    #define ETS_DISABLED        4
-    #define ETS_FOCUSED         5
-    #define ETS_READONLY        6
-    #define ETS_ASSIST          7
-    #define TMT_FILLCOLOR       3802
-    #define TMT_TEXTCOLOR       3803
-    #define TMT_BORDERCOLOR     3801
-    #define TMT_EDGEFILLCOLOR   3808
-    //----------------------------------
-#endif
-
+#include "wx/msw/dc.h"
 
 #define NATIVE_TEXT_INDENT_XP       4
 #define NATIVE_TEXT_INDENT_CLASSIC  2
-
-#define TEXTCTRLXADJUST_XP          1
-#define TEXTCTRLYADJUST_XP          3
-#define TEXTCTRLXADJUST_CLASSIC     1
-#define TEXTCTRLYADJUST_CLASSIC     2
 
 #define COMBOBOX_ANIMATION_RESOLUTION   10
 
@@ -85,16 +55,16 @@
 // ============================================================================
 
 
-BEGIN_EVENT_TABLE(wxComboCtrl, wxComboCtrlBase)
+wxBEGIN_EVENT_TABLE(wxComboCtrl, wxComboCtrlBase)
     EVT_PAINT(wxComboCtrl::OnPaintEvent)
     EVT_MOUSE_EVENTS(wxComboCtrl::OnMouseEvent)
 #if wxUSE_COMBOCTRL_POPUP_ANIMATION
     EVT_TIMER(wxID_ANY, wxComboCtrl::OnTimerEvent)
 #endif
-END_EVENT_TABLE()
+wxEND_EVENT_TABLE()
 
 
-IMPLEMENT_DYNAMIC_CLASS(wxComboCtrl, wxComboCtrlBase)
+wxIMPLEMENT_DYNAMIC_CLASS(wxComboCtrl, wxComboCtrlBase);
 
 void wxComboCtrl::Init()
 {
@@ -113,21 +83,15 @@ bool wxComboCtrl::Create(wxWindow *parent,
     // Set border
     long border = style & wxBORDER_MASK;
 
-#if wxUSE_UXTHEME
-    wxUxThemeEngine* theme = wxUxThemeEngine::GetIfActive();
-#endif
-
     if ( !border )
     {
-        // For XP, have 1-width custom border, for older version use sunken
-#if wxUSE_UXTHEME
-        if ( theme )
+        if ( wxUxThemeIsActive() )
         {
+            // For XP, have 1-width custom border, for older version use sunken
             border = wxBORDER_NONE;
             m_widthCustomBorder = 1;
         }
         else
-#endif
             border = wxBORDER_SUNKEN;
 
         style = (style & ~(wxBORDER_MASK)) | border;
@@ -140,21 +104,27 @@ bool wxComboCtrl::Create(wxWindow *parent,
                            pos,
                            size,
                            style | wxFULL_REPAINT_ON_RESIZE,
-                           wxDefaultValidator,
+                           validator,
                            name) )
         return false;
+
+    if ( wxUxThemeIsActive() && ::wxGetWinVersion() >= wxWinVersion_Vista )
+            m_iFlags |= wxCC_BUTTON_STAYS_DOWN |wxCC_BUTTON_COVERS_BORDER;
 
     if ( style & wxCC_STD_BUTTON )
         m_iFlags |= wxCC_POPUP_ON_MOUSE_UP;
 
+    // Prepare background for double-buffering or better background theme
+    // support, whichever is possible.
+    SetDoubleBuffered(true);
+    if ( !IsDoubleBuffered() )
+        SetBackgroundStyle( wxBG_STYLE_PAINT );
+
     // Create textctrl, if necessary
-    CreateTextCtrl( wxNO_BORDER, validator );
+    CreateTextCtrl( wxNO_BORDER );
 
     // Add keyboard input handlers for main control and textctrl
     InstallInputHandlers();
-
-    // Prepare background for double-buffering
-    SetBackgroundStyle( wxBG_STYLE_CUSTOM );
 
     // SetInitialSize should be called last
     SetInitialSize(size);
@@ -166,87 +136,23 @@ wxComboCtrl::~wxComboCtrl()
 {
 }
 
-void wxComboCtrl::OnThemeChange()
-{
-    // there doesn't seem to be any way to get the text colour using themes
-    // API: TMT_TEXTCOLOR doesn't work neither for EDIT nor COMBOBOX
-    if ( !m_hasFgCol )
-    {
-        wxColour fgCol = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
-        SetForegroundColour(fgCol);
-        m_hasFgCol = false;
-    }
-
-    wxColour bgCol = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
-
-#if wxUSE_UXTHEME
-    wxUxThemeEngine * const theme = wxUxThemeEngine::GetIfActive();
-    if ( theme )
-    {
-        // NB: use EDIT, not COMBOBOX (the latter works in XP but not Vista)
-        wxUxThemeHandle hTheme(this, L"EDIT");
-        COLORREF col;
-        HRESULT hr = theme->GetThemeColor
-                            (
-                                hTheme,
-                                EP_EDITTEXT,
-                                ETS_NORMAL,
-                                TMT_FILLCOLOR,
-                                &col
-                            );
-        if ( SUCCEEDED(hr) )
-        {
-            bgCol = wxRGBToColour(col);
-        }
-        else
-        {
-            wxLogApiError(_T("GetThemeColor(EDIT, ETS_NORMAL, TMT_FILLCOLOR)"),
-                          hr);
-        }
-    }
-#endif
-
-    if ( !m_hasBgCol )
-    {
-        SetBackgroundColour(bgCol);
-        m_hasBgCol = false;
-    }
-}
-
 void wxComboCtrl::OnResize()
 {
     //
     // Recalculates button and textctrl areas
 
-    int textCtrlXAdjust;
-    int textCtrlYAdjust;
-
-#if wxUSE_UXTHEME
-    if ( wxUxThemeEngine::GetIfActive() )
-    {
-        textCtrlXAdjust = TEXTCTRLXADJUST_XP;
-        textCtrlYAdjust = TEXTCTRLYADJUST_XP;
-    }
-    else
-#endif
-    {
-        textCtrlXAdjust = TEXTCTRLXADJUST_CLASSIC;
-        textCtrlYAdjust = TEXTCTRLYADJUST_CLASSIC;
-    }
-
     // Technically Classic Windows style combo has more narrow button,
     // but the native renderer doesn't paint it well like that.
-    int btnWidth = 17;
+    int btnWidth = FromDIP(17);
     CalculateAreas(btnWidth);
 
     // Position textctrl using standard routine
-    PositionTextCtrl(textCtrlXAdjust,textCtrlYAdjust);
+    PositionTextCtrl();
 }
 
 // Draws non-XP GUI dotted line around the focus area
 static void wxMSWDrawFocusRect( wxDC& dc, const wxRect& rect )
 {
-#if !defined(__WXWINCE__)
     /*
     RECT mswRect;
     mswRect.left = rect.x;
@@ -263,7 +169,7 @@ static void wxMSWDrawFocusRect( wxDC& dc, const wxRect& rect )
     //   it employs wxCAP_BUTT hack to have line of width 1.
     dc.SetLogicalFunction(wxINVERT);
 
-    wxPen pen(*wxBLACK,1,wxDOT);
+    wxPen pen(*wxBLACK, 1, wxPENSTYLE_DOT);
     pen.SetCap(wxCAP_BUTT);
     dc.SetPen(pen);
     dc.SetBrush(*wxTRANSPARENT_BRUSH);
@@ -271,16 +177,6 @@ static void wxMSWDrawFocusRect( wxDC& dc, const wxRect& rect )
     dc.DrawRectangle(rect);
 
     dc.SetLogicalFunction(wxCOPY);
-#else
-    dc.SetLogicalFunction(wxINVERT);
-
-    dc.SetPen(wxPen(*wxBLACK,1,wxDOT));
-    dc.SetBrush(*wxTRANSPARENT_BRUSH);
-
-    dc.DrawRectangle(rect);
-
-    dc.SetLogicalFunction(wxCOPY);
-#endif
 }
 
 // draw focus background on area in a way typical on platform
@@ -290,11 +186,10 @@ wxComboCtrl::PrepareBackground( wxDC& dc, const wxRect& rect, int flags ) const
 #if wxUSE_UXTHEME
     wxUxThemeHandle hTheme(this, L"COMBOBOX");
 #endif
-    //COLORREF cref;
 
     wxSize sz = GetClientSize();
     bool isEnabled;
-    bool isFocused; // also selected
+    bool doDrawFocusRect; // also selected
 
     // For smaller size control (and for disabled background) use less spacing
     int focusSpacingX;
@@ -303,8 +198,8 @@ wxComboCtrl::PrepareBackground( wxDC& dc, const wxRect& rect, int flags ) const
     if ( !(flags & wxCONTROL_ISSUBMENU) )
     {
         // Drawing control
-        isEnabled = IsEnabled();
-        isFocused = ShouldDrawFocus();
+        isEnabled = IsThisEnabled();
+        doDrawFocusRect = ShouldDrawFocus();
 
 #if wxUSE_UXTHEME
         // Windows-style: for smaller size control (and for disabled background) use less spacing
@@ -334,7 +229,7 @@ wxComboCtrl::PrepareBackground( wxDC& dc, const wxRect& rect, int flags ) const
     {
         // Drawing a list item
         isEnabled = true; // they are never disabled
-        isFocused = flags & wxCONTROL_SELECTED ? true : false;
+        doDrawFocusRect = flags & wxCONTROL_SELECTED ? true : false;
 
         focusSpacingX = 0;
         focusSpacingY = 0;
@@ -353,53 +248,66 @@ wxComboCtrl::PrepareBackground( wxDC& dc, const wxRect& rect, int flags ) const
     selRect.x += wcp + focusSpacingX;
     selRect.width -= wcp + (focusSpacingX*2);
 
-    //wxUxThemeEngine* theme = (wxUxThemeEngine*) NULL;
-    //if ( hTheme )
-    //    theme = wxUxThemeEngine::GetIfActive();
-
-    wxColour bgCol;
     wxColour fgCol;
-    bool drawDottedEdge = false;
+    wxColour bgCol;
+    bool doDrawDottedEdge = false;
+    bool doDrawSelRect = true;
 
-    if ( isEnabled && isFocused && HasFlag(wxCB_READONLY) )
-        drawDottedEdge = true;
+    // TODO: doDrawDottedEdge = true when focus has arrived to control via tab.
+    //       (and other cases which are not that apparent).
 
     if ( isEnabled )
     {
-        if ( isFocused )
-            fgCol = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHTTEXT);
-        else if ( m_hasFgCol )
-            // Honour the custom foreground colour
-            fgCol = GetForegroundColour();
+        // If popup is hidden and this control is focused,
+        // then draw the focus-indicator (selbgcolor background etc.).
+        if ( doDrawFocusRect )
+        {
+            // NB: We can't really use XP visual styles to get TMT_TEXTCOLOR since
+            //     it is not properly defined for combo boxes. Instead, they expect
+            //     you to use DrawThemeText.
+            //
+            //    Here is, however, sample code how to get theme colours:
+            //
+            //    COLORREF cref;
+            //    theme->GetThemeColor(hTheme,EP_EDITTEXT,ETS_NORMAL,TMT_TEXTCOLOR,&cref);
+            //    dc.SetTextForeground( wxRGBToColour(cref) );
+            if ( (m_iFlags & wxCC_FULL_BUTTON) && !(flags & wxCONTROL_ISSUBMENU) )
+            {
+                // Vista style read-only combo
+                fgCol = GetForegroundColour();
+                bgCol = GetBackgroundColour();
+                doDrawSelRect = false;
+                doDrawDottedEdge = true;
+            }
+            else
+            {
+                fgCol = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHTTEXT);
+                bgCol = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT);
+            }
+        }
         else
-            fgCol = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+        {
+            fgCol = GetForegroundColour();
+            bgCol = GetBackgroundColour();
+            doDrawSelRect = false;
+        }
     }
     else
     {
         fgCol = wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT);
-    }
-
-    if ( isEnabled )
-    {
-        if ( isFocused )
-            bgCol = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT);
-        else if ( m_hasBgCol )
-            // Honour the custom background colour
-            bgCol = GetBackgroundColour();
-        else
-            bgCol = GetBackgroundColour();
-    }
-    else
-    {
         bgCol = wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE);
     }
 
     dc.SetTextForeground(fgCol);
     dc.SetBrush(bgCol);
-    dc.SetPen(bgCol);
-    dc.DrawRectangle(selRect);
-    if ( drawDottedEdge )
-        wxMSWDrawFocusRect(dc,selRect);
+    if ( doDrawSelRect )
+    {
+        dc.SetPen(bgCol);
+        dc.DrawRectangle(selRect);
+    }
+
+    if ( doDrawDottedEdge )
+        wxMSWDrawFocusRect(dc, selRect);
 
     // Don't clip exactly to the selection rectangle so we can draw
     // to the non-selected area in front of it.
@@ -413,93 +321,194 @@ void wxComboCtrl::OnPaintEvent( wxPaintEvent& WXUNUSED(event) )
     // TODO: Convert drawing in this function to Windows API Code
 
     wxSize sz = GetClientSize();
-    wxAutoBufferedPaintDC dc(this);
+    wxDC* dcPtr = wxAutoBufferedPaintDCFactory(this);
+    wxDC& dc = *dcPtr;
 
-    const wxRect& rectb = m_btnArea;
-    wxRect rect = m_tcArea;
-    bool isEnabled = IsEnabled();
-    wxColour bgCol = GetBackgroundColour();
-    wxColour fgCol;
+    const wxRect& rectButton = m_btnArea;
+    wxRect rectTextField = m_tcArea;
+
+    // FIXME: Either SetBackgroundColour or GetBackgroundColour
+    //        doesn't work under Vista, so here's a temporary
+    //        workaround.
+    //        In the theme-less rendering code below, this fixes incorrect
+    //        background on read-only comboboxes (they are gray, but should be
+    //        white).
+    wxColour bgCol = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
 
 #if wxUSE_UXTHEME
-    wxUxThemeEngine* theme = NULL;
+    const bool isEnabled = IsThisEnabled();
+
+    wxMSWDCImpl *impl = (wxMSWDCImpl*) dc.GetImpl();
+    HDC hDc = GetHdcOf(*impl);
+    HWND hWnd = GetHwndOf(this);
+
     wxUxThemeHandle hTheme(this, L"COMBOBOX");
-#endif
+#endif // wxUSE_UXTHEME
 
-    int etsState;
+    wxRect borderRect(0,0,sz.x,sz.y);
 
-    // area around both controls
-    wxRect rect2(0,0,sz.x,sz.y);
     if ( m_iFlags & wxCC_IFLAG_BUTTON_OUTSIDE )
     {
-        rect2 = m_tcArea;
-        rect2.Inflate(1);
+        borderRect = m_tcArea;
+        borderRect.Inflate(1);
     }
 
+    int drawButFlags = 0;
+
 #if wxUSE_UXTHEME
-    // Use theme to draw border on XP
     if ( hTheme )
     {
-        theme = wxUxThemeEngine::GetIfActive();
-        COLORREF cref;
+        const bool useVistaComboBox = ::wxGetWinVersion() >= wxWinVersion_Vista;
 
-        // Select correct border colour
+        RECT rFull;
+        wxCopyRectToRECT(borderRect, rFull);
+
+        RECT rButton;
+        wxCopyRectToRECT(rectButton, rButton);
+
+        RECT rBorder;
+        wxCopyRectToRECT(borderRect, rBorder);
+
+        bool isNonStdButton = (m_iFlags & wxCC_IFLAG_BUTTON_OUTSIDE) ||
+                              (m_iFlags & wxCC_IFLAG_HAS_NONSTANDARD_BUTTON);
+
+        //
+        // Get some states for themed drawing
+        int butState;
+
         if ( !isEnabled )
-            etsState = ETS_DISABLED;
-        else
-            etsState = ETS_NORMAL;
-
-        if ( m_widthCustomBorder )
         {
-            theme->GetThemeColor(hTheme,EP_EDITTEXT,etsState,TMT_BORDERCOLOR,&cref);
-
-            // Set border colour
-            dc.SetPen( wxRGBToColour(cref) );
-
-            dc.SetBrush( *wxTRANSPARENT_BRUSH );
-            dc.DrawRectangle(rect2);
+            butState = CBXS_DISABLED;
+        }
+        // Vista will display the drop-button as depressed always
+        // when the popup window is visilbe
+        else if ( (m_btnState & wxCONTROL_PRESSED) ||
+                  (useVistaComboBox && !IsPopupWindowState(Hidden)) )
+        {
+            butState = CBXS_PRESSED;
+        }
+        else if ( m_btnState & wxCONTROL_CURRENT )
+        {
+            butState = CBXS_HOT;
+        }
+        else
+        {
+            butState = CBXS_NORMAL;
         }
 
-        theme->GetThemeColor(hTheme,EP_EDITTEXT,etsState,TMT_TEXTCOLOR,&cref);
-        fgCol = wxRGBToColour(cref);
+        int comboBoxPart = 0;  // For XP, use the 'default' part
+        RECT* rUseForBg = &rBorder;
+
+        bool drawFullButton = false;
+        int bgState = butState;
+        const bool isFocused = (FindFocus() == GetMainWindowOfCompositeControl()) ? true : false;
+
+        if ( useVistaComboBox )
+        {
+            // Draw the entire control as a single button?
+            if ( !isNonStdButton )
+            {
+                if ( HasFlag(wxCB_READONLY) )
+                    drawFullButton = true;
+            }
+
+            if ( drawFullButton )
+            {
+                comboBoxPart = CP_READONLY;
+                rUseForBg = &rFull;
+
+                // It should be safe enough to update this flag here.
+                m_iFlags |= wxCC_FULL_BUTTON;
+            }
+            else
+            {
+                comboBoxPart = CP_BORDER;
+                m_iFlags &= ~wxCC_FULL_BUTTON;
+
+                if ( isFocused )
+                    bgState = CBB_FOCUSED;
+                else
+                    bgState = CBB_NORMAL;
+            }
+        }
+
+        //
+        // Draw parent's background, if necessary
+        RECT* rUseForTb = NULL;
+
+        if ( ::IsThemeBackgroundPartiallyTransparent( hTheme, comboBoxPart, bgState ) )
+            rUseForTb = &rFull;
+        else if ( m_iFlags & wxCC_IFLAG_BUTTON_OUTSIDE )
+            rUseForTb = &rButton;
+
+        if ( rUseForTb )
+            ::DrawThemeParentBackground( hWnd, hDc, rUseForTb );
+
+        //
+        // Draw the control background (including the border)
+        if ( m_widthCustomBorder > 0 )
+        {
+            ::DrawThemeBackground( hTheme, hDc, comboBoxPart, bgState, rUseForBg, NULL );
+        }
+        else
+        {
+            // No border. We can't use theme, since it cannot be relied on
+            // to deliver borderless drawing, even with DrawThemeBackgroundEx.
+            dc.SetBrush(bgCol);
+            dc.SetPen(bgCol);
+            dc.DrawRectangle(borderRect);
+        }
+
+        //
+        // Draw the drop-button
+        if ( !isNonStdButton )
+        {
+            drawButFlags = Button_BitmapOnly;
+
+            int butPart = CP_DROPDOWNBUTTON;
+
+            if ( useVistaComboBox )
+            {
+                if ( drawFullButton )
+                {
+                    // We need to alter the button style slightly before
+                    // drawing the actual button (but it was good above
+                    // when background etc was done).
+                    if ( butState == CBXS_HOT || butState == CBXS_PRESSED )
+                        butState = CBXS_NORMAL;
+                }
+
+                if ( m_btnSide == wxRIGHT )
+                    butPart = CP_DROPDOWNBUTTONRIGHT;
+                else
+                    butPart = CP_DROPDOWNBUTTONLEFT;
+
+            }
+            ::DrawThemeBackground( hTheme, hDc, butPart, butState, &rButton, NULL );
+        }
+        else if ( useVistaComboBox &&
+                  (m_iFlags & wxCC_IFLAG_BUTTON_OUTSIDE) )
+        {
+            // We'll do this, because DrawThemeParentBackground
+            // doesn't seem to be reliable on Vista.
+            drawButFlags |= Button_PaintBackground;
+        }
     }
     else
 #endif
     {
-        // draw regular background
-        fgCol = GetForegroundColour();
+        // Windows 2000 and earlier
+        drawButFlags = Button_PaintBackground;
+
+        dc.SetBrush(bgCol);
+        dc.SetPen(bgCol);
+        dc.DrawRectangle(borderRect);
     }
 
-    rect2.Deflate(m_widthCustomBorder);
+    // Button rendering (may only do the bitmap on button, depending on the flags)
+    DrawButton( dc, rectButton, drawButFlags );
 
-    dc.SetBrush(bgCol);
-    dc.SetPen(bgCol);
-
-    // clear main background
-    dc.DrawRectangle(rect);
-
-    // Button background with theme?
-    int drawButFlags = Draw_PaintBg;
-#if wxUSE_UXTHEME
-    if ( hTheme && m_blankButtonBg )
-    {
-        RECT r;
-        wxCopyRectToRECT(rectb, r);
-
-        // Draw parent background if needed (since button looks like its out of
-        // the combo, this is preferred).
-        theme->DrawThemeParentBackground(GetHwndOf(this),
-                                         GetHdcOf(dc),
-                                         &r);
-
-        drawButFlags = 0;
-    }
-#endif
-
-    // Standard button rendering
-    DrawButton(dc,rectb,drawButFlags);
-
-    // paint required portion on the control
+    // Paint required portion of the custom image on the control
     if ( (!m_text || m_widthCustomPaint) )
     {
         wxASSERT( m_widthCustomPaint >= 0 );
@@ -507,16 +516,18 @@ void wxComboCtrl::OnPaintEvent( wxPaintEvent& WXUNUSED(event) )
         // this is intentionally here to allow drawed rectangle's
         // right edge to be hidden
         if ( m_text )
-            rect.width = m_widthCustomPaint;
+            rectTextField.width = m_widthCustomPaint;
 
         dc.SetFont( GetFont() );
 
-        dc.SetClippingRegion(rect);
+        dc.SetClippingRegion(rectTextField);
         if ( m_popupInterface )
-            m_popupInterface->PaintComboControl(dc,rect);
+            m_popupInterface->PaintComboControl(dc,rectTextField);
         else
-            wxComboPopup::DefaultPaintComboControl(this,dc,rect);
+            wxComboPopup::DefaultPaintComboControl(this,dc,rectTextField);
     }
+
+    delete dcPtr;
 }
 
 void wxComboCtrl::OnMouseEvent( wxMouseEvent& event )
@@ -603,10 +614,11 @@ static wxUint32 GetUserPreferencesMask()
 #endif
 
 #if wxUSE_COMBOCTRL_POPUP_ANIMATION
-void wxComboCtrl::OnTimerEvent( wxTimerEvent& WXUNUSED(event) )
+void wxComboCtrl::DoTimerEvent()
 {
     bool stopTimer = false;
 
+    wxWindow* win = GetPopupWindow();
     wxWindow* popup = GetPopupControl()->GetControl();
 
     // Popup was hidden before it was fully shown?
@@ -616,11 +628,14 @@ void wxComboCtrl::OnTimerEvent( wxTimerEvent& WXUNUSED(event) )
     }
     else
     {
-        wxLongLong t = ::wxGetLocalTimeMillis();
+        wxMilliClock_t t = ::wxGetLocalTimeMillis();
         const wxRect& rect = m_animRect;
-        wxWindow* win = GetPopupWindow();
 
+#if wxUSE_LONGLONG
         int pos = (int) (t-m_animStart).GetLo();
+#else
+        int pos = (int) (t-m_animStart);
+#endif
         if ( pos < COMBOBOX_ANIMATION_DURATION )
         {
             int height = rect.height;
@@ -636,8 +651,10 @@ void wxComboCtrl::OnTimerEvent( wxTimerEvent& WXUNUSED(event) )
             }
             else
             {
-                popup->Move( 0, -y );
+                // Note that apparently Move() should be called after
+                // SetSize() to reduce (or even eliminate) animation garbage
                 win->SetSize( rect.x, rect.y, rect.width, h );
+                popup->Move( 0, -y );
             }
         }
         else
@@ -648,9 +665,13 @@ void wxComboCtrl::OnTimerEvent( wxTimerEvent& WXUNUSED(event) )
 
     if ( stopTimer )
     {
-        popup->Move( 0, 0 );
         m_animTimer.Stop();
         DoShowPopup( m_animRect, m_animFlags );
+        popup->Move( 0, 0 );
+
+        // Do a one final refresh to clean up the rare cases of animation
+        // garbage
+        win->Refresh();
     }
 }
 #endif
@@ -671,7 +692,7 @@ bool wxComboCtrl::AnimateShow( const wxRect& rect, int flags )
         m_animTimer.SetOwner( this, wxID_ANY );
         m_animTimer.Start( COMBOBOX_ANIMATION_RESOLUTION, wxTIMER_CONTINUOUS );
 
-        OnTimerEvent(*((wxTimerEvent*)NULL));  // Event is never used, so we can give NULL
+        DoTimerEvent();
 
         return false;
     }
@@ -682,10 +703,8 @@ bool wxComboCtrl::AnimateShow( const wxRect& rect, int flags )
 
 wxCoord wxComboCtrl::GetNativeTextIndent() const
 {
-#if wxUSE_UXTHEME
-    if ( wxUxThemeEngine::GetIfActive() )
+    if ( wxUxThemeIsActive() )
         return NATIVE_TEXT_INDENT_XP;
-#endif
     return NATIVE_TEXT_INDENT_CLASSIC;
 }
 
@@ -708,19 +727,12 @@ bool wxComboCtrl::IsKeyPopupToggle(const wxKeyEvent& event) const
 
         case WXK_DOWN:
         case WXK_UP:
-            // On XP or with writable combo in Classic, arrows don't open the
-            // popup but Alt-arrow does
-            if ( event.AltDown() ||
-                    ( !isPopupShown &&
-                      HasFlag(wxCB_READONLY)
-#if wxUSE_UXTHEME
-                      &&
-                      !wxUxThemeEngine::GetIfActive()
-#endif
-                    ) )
-            {
+        case WXK_NUMPAD_DOWN:
+        case WXK_NUMPAD_UP:
+            // Arrow keys (and mouse wheel) toggle the popup in the native
+            // combo boxes
+            if ( event.AltDown() )
                 return true;
-            }
             break;
     }
 

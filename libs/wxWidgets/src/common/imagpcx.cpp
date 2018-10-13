@@ -3,7 +3,6 @@
 // Purpose:     wxImage PCX handler
 // Author:      Guillermo Rodriguez Garcia <guille@iies.es>
 // Version:     1.1
-// CVS-ID:      $Id: imagpcx.cpp 54766 2008-07-22 20:16:03Z VZ $
 // Copyright:   (c) 1999 Guillermo Rodriguez Garcia
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -34,7 +33,7 @@
 // wxPCXHandler
 //-----------------------------------------------------------------------------
 
-IMPLEMENT_DYNAMIC_CLASS(wxPCXHandler,wxImageHandler)
+wxIMPLEMENT_DYNAMIC_CLASS(wxPCXHandler,wxImageHandler);
 
 #if wxUSE_STREAMS
 
@@ -42,6 +41,7 @@ IMPLEMENT_DYNAMIC_CLASS(wxPCXHandler,wxImageHandler)
 // RLE encoding and decoding
 //-----------------------------------------------------------------------------
 
+static
 void RLEencode(unsigned char *p, unsigned int size, wxOutputStream& s)
 {
     unsigned int data, last, cont;
@@ -85,6 +85,7 @@ void RLEencode(unsigned char *p, unsigned int size, wxOutputStream& s)
     s.PutC((char) last);
 }
 
+static
 void RLEdecode(unsigned char *p, unsigned int size, wxInputStream& s)
 {
     // Read 'size' bytes. The PCX official specs say there will be
@@ -157,6 +158,7 @@ enum {
 //  Returns wxPCX_OK on success, or an error code otherwise
 //  (see above for error codes)
 //
+static
 int ReadPCX(wxImage *image, wxInputStream& stream)
 {
     unsigned char hdr[128];         // PCX header
@@ -214,7 +216,7 @@ int ReadPCX(wxImage *image, wxInputStream& stream)
 
     image->Create(width, height);
 
-    if (!image->Ok())
+    if (!image->IsOk())
         return wxPCX_MEMERR;
 
     if ((p = (unsigned char *) malloc(bytesperline * nplanes)) == NULL)
@@ -304,6 +306,7 @@ int ReadPCX(wxImage *image, wxInputStream& stream)
 //  PCX if possible, and then fall back to 24-bit if there
 //  are more than 256 different colours.
 //
+static
 int SavePCX(wxImage *image, wxOutputStream& stream)
 {
     unsigned char hdr[128];         // PCX header
@@ -331,7 +334,7 @@ int SavePCX(wxImage *image, wxOutputStream& stream)
     // according to PCX specs) and allocate space for one complete
     // scanline.
 
-    if (!image->Ok())
+    if (!image->IsOk())
         return wxPCX_INVFORMAT;
 
     width = image->GetWidth();
@@ -439,7 +442,9 @@ bool wxPCXHandler::LoadFile( wxImage *image, wxInputStream& stream, bool verbose
     if (!CanRead(stream))
     {
         if (verbose)
+        {
             wxLogError(_("PCX: this is not a PCX file."));
+        }
 
         return false;
     }
@@ -487,7 +492,7 @@ bool wxPCXHandler::SaveFile( wxImage *image, wxOutputStream& stream, bool verbos
 
 bool wxPCXHandler::DoCanRead( wxInputStream& stream )
 {
-    unsigned char c = stream.GetC();
+    unsigned char c = stream.GetC();     // it's ok to modify the stream position here
     if ( !stream )
         return false;
 

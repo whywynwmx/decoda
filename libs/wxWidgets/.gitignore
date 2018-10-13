@@ -1,0 +1,4 @@
+build/msw/vc_x64_mswu/*
+build/msw/vc_x64_mswud/*
+lib/*
+.vs/*

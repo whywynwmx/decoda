@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: fontdlg.cpp 41054 2006-09-07 19:01:45Z ABX $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -27,13 +26,13 @@
 #if wxUSE_FONTDLG
 
 #include "wx/fontdlg.h"
+#include "wx/modalhook.h"
 
 #ifndef WX_PRECOMP
     #include "wx/msw/wrapcdlg.h"
     #include "wx/utils.h"
     #include "wx/dialog.h"
     #include "wx/log.h"
-    #include "wx/cmndata.h"
     #include "wx/math.h"
 #endif
 
@@ -44,18 +43,57 @@
 // wxWin macros
 // ----------------------------------------------------------------------------
 
-IMPLEMENT_DYNAMIC_CLASS(wxFontDialog, wxDialog)
+wxIMPLEMENT_DYNAMIC_CLASS(wxFontDialog, wxDialog);
 
 // ============================================================================
 // implementation
 // ============================================================================
 
 // ----------------------------------------------------------------------------
+// font dialog hook proc used for setting the dialog title if necessary
+// ----------------------------------------------------------------------------
+
+static
+UINT_PTR CALLBACK
+wxFontDialogHookProc(HWND hwnd,
+                     UINT uiMsg,
+                     WPARAM WXUNUSED(wParam),
+                     LPARAM lParam)
+{
+    if ( uiMsg == WM_INITDIALOG )
+    {
+        CHOOSEFONT *pCH = (CHOOSEFONT *)lParam;
+        wxFontDialog * const
+            dialog = reinterpret_cast<wxFontDialog *>(pCH->lCustData);
+
+        ::SetWindowText(hwnd, dialog->GetTitle().t_str());
+    }
+
+    return 0;
+}
+
+// ----------------------------------------------------------------------------
 // wxFontDialog
 // ----------------------------------------------------------------------------
 
+void wxFontDialog::SetTitle(const wxString& title)
+{
+    // Just store the title here, we can't set it right now because the dialog
+    // doesn't exist yet -- it will be created only when ShowModal() is called.
+    m_title = title;
+}
+
+wxString wxFontDialog::GetTitle() const
+{
+    return m_title;
+}
+
 int wxFontDialog::ShowModal()
 {
+    WX_HOOK_MODAL_DIALOG();
+
+    wxWindow* const parent = GetParentForModalDialog(m_parent, GetWindowStyle());
+    WXHWND hWndParent = parent ? GetHwndOf(parent) : NULL;
     // It should be OK to always use GDI simulations
     DWORD flags = CF_SCREENFONTS /* | CF_NOSIMULATIONS */ ;
 
@@ -65,17 +103,25 @@ int wxFontDialog::ShowModal()
     wxZeroMemory(chooseFontStruct);
 
     chooseFontStruct.lStructSize = sizeof(CHOOSEFONT);
-    if ( m_parent )
-        chooseFontStruct.hwndOwner = GetHwndOf(m_parent);
+    chooseFontStruct.hwndOwner = hWndParent;
     chooseFontStruct.lpLogFont = &logFont;
 
-    if ( m_fontData.m_initialFont.Ok() )
+    // Currently we only use the hook to set the title, so only set it up if
+    // we really need to do this.
+    if ( !m_title.empty() )
+    {
+        flags |= CF_ENABLEHOOK;
+        chooseFontStruct.lCustData = (LPARAM)this;
+        chooseFontStruct.lpfnHook = wxFontDialogHookProc;
+    }
+
+    if ( m_fontData.m_initialFont.IsOk() )
     {
         flags |= CF_INITTOLOGFONTSTRUCT;
         wxFillLogFont(&logFont, &m_fontData.m_initialFont);
     }
 
-    if ( m_fontData.m_fontColour.Ok() )
+    if ( m_fontData.m_fontColour.IsOk() )
     {
         chooseFontStruct.rgbColors = wxColourToRGB(m_fontData.m_fontColour);
     }
@@ -112,17 +158,12 @@ int wxFontDialog::ShowModal()
     }
     else
     {
-        // common dialog failed - why?
-#ifdef __WXDEBUG__
         DWORD dwErr = CommDlgExtendedError();
         if ( dwErr != 0 )
         {
-            // this msg is only for developers
-            wxLogError(wxT("Common dialog failed with error code %0lx."),
-                       dwErr);
+            wxLogError(_("Common dialog failed with error code %0lx."), dwErr);
         }
         //else: it was just cancelled
-#endif
 
         return wxID_CANCEL;
     }

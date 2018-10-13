@@ -41,6 +41,7 @@ project "Frontend"
     language "C++"
     dependson { "LuaInject", "tinyxml" }
     flags { "MultiProcessorCompile" }
+    defines { "wxUSE_UNICODE=1", "wxDEBUG_LEVEL=0" }
     linkoptions { "/ignore:4099" } 
     files {
         "src/Frontend/*.h",
@@ -53,7 +54,7 @@ project "Frontend"
         "libs/wxScintilla/include",
     }
     libdirs {
-        "libs/wxWidgets/lib/vc_lib",
+        "libs/wxWidgets/lib/vc_x64_lib",
         "libs/wxScintilla/lib",
         "build/libs/%{cfg.buildcfg}%{cfg.platform}",
     }
@@ -65,44 +66,36 @@ project "Frontend"
         "tinyxml"
     }
 
-    filter "Debug"
-        includedirs { 
-          "libs/wxWidgets/lib/vc_lib/mswd" 
-        }
-        links {
-            "wxbase28d",
-            "wxmsw28d_core",
-            "wxmsw28d_aui",
-            "wxscintillad",
-            "wxbase28d_xml",
-            "wxexpatd",
-            "wxmsw28d_adv",
-            "wxmsw28d_qa",
-            "wxzlibd",
-            "wxmsw28d_richtext",
-            "wxmsw28d_html",
-            "wxpngd",
-        }
+  filter "Debug"
+      includedirs { 
+          "libs/wxWidgets/lib/vc_x64_lib/mswud" 
+      }
+      links {
+          "wxbase31ud",
+          "wxmsw31ud_core",
+          "wxmsw31ud_aui",
+          "wxbase31ud_xml",
+          "wxexpatd",
+          "wxzlibd",
+          "wxpngd",
+          "wxscintillad",
+      }
 
-    filter "Release"
-        includedirs { 
-          "libs/wxWidgets/lib/vc_lib/msw" 
-        }
-        links {
-            "wxbase28",
-            "wxmsw28_core",
-            "wxmsw28_aui",
-            "wxscintilla",
-            "wxbase28_xml",
-            "wxexpat",
-            "wxmsw28_adv",
-            "wxmsw28_qa",
-            "wxzlib",
-            "wxmsw28_richtext",
-            "wxmsw28_html",
-            "wxpng",
-        }        
-        
+  filter "Release"
+      includedirs {
+          "libs/wxWidgets/lib/vc_x64_lib/mswu" 
+      }
+      links {
+          "wxbase31u",
+          "wxmsw31u_core",
+          "wxmsw31u_aui",
+          "wxbase31u_xml",
+          "wxexpat",
+          "wxzlib",
+          "wxpng",
+          "wxscintilla",
+      }
+
 project "LuaInject"
     kind "SharedLib"
     targetname "LuaInject%{cfg.platform}"
