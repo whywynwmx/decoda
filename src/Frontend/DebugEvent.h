@@ -44,7 +44,7 @@ public:
     /**
      * Constructor.
      */
-    wxDebugEvent(EventId eventId, unsigned int vm);
+    wxDebugEvent(EventId eventId, unsigned long long vm);
 
     /** 
      * Returns the event id of the event.
@@ -54,7 +54,7 @@ public:
     /**
      * Returns the id of the virtual machine the event came from.
      */
-    unsigned int GetVm() const;
+    unsigned long long GetVm() const;
 
     /**
      * Returns the index of the script the event relates to.

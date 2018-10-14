@@ -173,6 +173,12 @@ bool Channel::WriteUInt32(unsigned int value)
     return Write(&temp, 4);
 }
 
+bool Channel::WriteUInt64(unsigned long long value)
+{
+    unsigned long long temp = value;
+    return Write(&temp, 8);
+}
+
 bool Channel::WriteString(const char* value)
 {
     unsigned int length = static_cast<int>(strlen(value));
@@ -211,6 +217,16 @@ bool Channel::ReadUInt32(unsigned int& value)
     DWORD temp;
     if (!Read(&temp, 4))
     {
+        return false;
+    }
+    value = temp;
+    return true;
+}
+
+bool Channel::ReadUInt64(unsigned long long& value)
+{
+    unsigned long long temp;
+    if (!Read(&temp, 8)) {
         return false;
     }
     value = temp;

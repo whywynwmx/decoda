@@ -24,7 +24,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 
 DEFINE_EVENT_TYPE(wxEVT_DEBUG_EVENT)
 
-wxDebugEvent::wxDebugEvent(EventId eventId, unsigned int vm)
+wxDebugEvent::wxDebugEvent(EventId eventId, unsigned long long vm)
     : wxEvent(0, wxEVT_DEBUG_EVENT)
 {
     m_eventId       = eventId;
@@ -40,7 +40,7 @@ EventId wxDebugEvent::GetEventId() const
     return m_eventId;
 }
 
-unsigned int wxDebugEvent::GetVm() const
+unsigned long long wxDebugEvent::GetVm() const
 {
     return m_vm;
 }

@@ -502,8 +502,8 @@ void DebugFrontend::EventThreadProc()
     while (m_eventChannel.ReadUInt32(eventId))
     {
 
-        unsigned int vm;
-        m_eventChannel.ReadUInt32(vm);
+        unsigned long long vm;
+        m_eventChannel.ReadUInt64(vm);
 
         wxDebugEvent event(static_cast<EventId>(eventId), vm);
 

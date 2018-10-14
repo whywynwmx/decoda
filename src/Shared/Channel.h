@@ -71,6 +71,7 @@ public:
      */
     bool WriteUInt32(unsigned int value);
 
+    bool WriteUInt64(unsigned long long value);
     /**
      * Writes a string to the channel and returns immediately.
      */
@@ -92,6 +93,7 @@ public:
      */
     bool ReadUInt32(unsigned int& value);
 
+    bool ReadUInt64(unsigned long long& value);
     /**
      * Reads a string from the channel. This operation blocks until the
      * data is available.
