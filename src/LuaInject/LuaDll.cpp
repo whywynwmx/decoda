@@ -230,6 +230,11 @@ template <typename Result, typename... Args> struct LuaAPIPtr<Result(Args...)> {
         cdeclptr(args...);
         return false;
     }
+
+    template<CdeclType func> static Result WorkerCallback(Args..., int api)
+    {
+        func(Args..., int api);
+    }
 };
 
 /**
@@ -479,10 +484,8 @@ const char* __stdcall MemoryReader_stdcall(lua_State* L, void* data, size_t* siz
 }
 
 #pragma auto_inline(off)
-int DecodaOutputWorker(unsigned long api, lua_State* L, bool& stdcall)
+int DecodaOutputWorker(int api, lua_State* L)
 {
-
-    stdcall = g_interfaces[api].stdcall;
 
     const char* message = lua_tostring_dll(api, L, 1);
     DebugBackend::Get().Message(message);
@@ -492,7 +495,7 @@ int DecodaOutputWorker(unsigned long api, lua_State* L, bool& stdcall)
 }
 #pragma auto_inline()
 
-NAKED int DecodaOutput(unsigned long api, lua_State* L)
+NAKED int DecodaOutput(int api, lua_State* L)
 {
 
     int result;
@@ -500,17 +503,15 @@ NAKED int DecodaOutput(unsigned long api, lua_State* L)
 
     INTERCEPT_PROLOG()
 
-    result = DecodaOutputWorker(api, L, stdcall);
+    result = DecodaOutputWorker(api, L);
 
     INTERCEPT_EPILOG(4)
 
 }
 
 #pragma auto_inline(off)
-int CPCallHandlerWorker(unsigned long api, lua_State* L, bool& stdcall)
+int CPCallHandlerWorker(int api, lua_State* L)
 {
-    
-    stdcall = g_interfaces[api].stdcall;
     CPCallHandlerArgs args = *static_cast<CPCallHandlerArgs*>(lua_touserdata_dll(api, L, 1));
 
     // Remove the old args and put the new one on the stack.
@@ -522,7 +523,7 @@ int CPCallHandlerWorker(unsigned long api, lua_State* L, bool& stdcall)
 }
 #pragma auto_inline()
 
-NAKED int CPCallHandler(unsigned long api, lua_State* L)
+NAKED int CPCallHandler(int api, lua_State* L)
 {
 
     int result;
@@ -530,13 +531,13 @@ NAKED int CPCallHandler(unsigned long api, lua_State* L)
         
     INTERCEPT_PROLOG()
     
-    result = CPCallHandlerWorker(api, L, stdcall);
+    result = CPCallHandlerWorker(api, L);
 
     INTERCEPT_EPILOG(4)
 
 }
 
-int lua_cpcall_dll(unsigned long api, lua_State *L, lua_CFunction_dll func, void *udn)
+int lua_cpcall_dll(int api, lua_State *L, lua_CFunction_dll func, void *udn)
 {
 
     CPCallHandlerArgs args;
@@ -551,27 +552,26 @@ int lua_cpcall_dll(unsigned long api, lua_State *L, lua_CFunction_dll func, void
 }
 
 #pragma auto_inline(off)
-void HookHandlerWorker(unsigned long api, lua_State* L, lua_Debug* ar,  bool& stdcall)
+void HookHandlerWorker(int api, lua_State* L, lua_Debug* ar)
 {
-    stdcall = g_interfaces[api].stdcall;
     return DebugBackend::Get().HookCallback(api, L, ar);
 }
 #pragma auto_inline()
 
-NAKED void HookHandler(unsigned long api, lua_State* L, lua_Debug* ar)
+NAKED void HookHandler(int api, lua_State* L, lua_Debug* ar)
 {
 
     bool stdcall;
 
     INTERCEPT_PROLOG()
     
-    HookHandlerWorker(api, L, ar, stdcall);
+    HookHandlerWorker(api, L, ar);
 
     INTERCEPT_EPILOG_NO_RETURN(8)
 
 }
 
-void SetHookMode(unsigned long api, lua_State* L, HookMode mode)
+void SetHookMode(int api, lua_State* L, HookMode mode)
 {
 
   if(mode == HookMode_None)
@@ -601,12 +601,12 @@ void SetHookMode(unsigned long api, lua_State* L, HookMode mode)
   
 }
 
-int lua_gethookmask(unsigned long api, lua_State *L)
+int lua_gethookmask(int api, lua_State *L)
 {
   return g_interfaces[api].lua_gethookmask_dll(L);
 }
 
-HookMode GetHookMode(unsigned long api, lua_State* L)
+HookMode GetHookMode(int api, lua_State* L)
 {
 
   int mask = lua_gethookmask(api, L);
@@ -630,17 +630,17 @@ HookMode GetHookMode(unsigned long api, lua_State* L)
 }
 
 
-bool GetIsHookEventRet( unsigned long api, int event)
+bool GetIsHookEventRet( int api, int event)
 {
     return event == LUA_HOOKRET || event == g_interfaces[api].hookTailRet;
 }
 
-bool GetIsHookEventCall( unsigned long api, int event)
+bool GetIsHookEventCall( int api, int event)
 {
     return event == LUA_HOOKCALL || event == g_interfaces[api].hookTailCall;
 }
 
-int GetEvent(unsigned long api, const lua_Debug* ar)
+int GetEvent(int api, const lua_Debug* ar)
 {
     switch( g_interfaces[api].version)
     {
@@ -649,7 +649,7 @@ int GetEvent(unsigned long api, const lua_Debug* ar)
     }
 }
 
-int GetNups(unsigned long api, const lua_Debug* ar)
+int GetNups(int api, const lua_Debug* ar)
 {
     switch( g_interfaces[api].version)
     {
@@ -658,7 +658,7 @@ int GetNups(unsigned long api, const lua_Debug* ar)
     }
 }
 
-int GetCurrentLine(unsigned long api, const lua_Debug* ar)
+int GetCurrentLine(int api, const lua_Debug* ar)
 {
     switch( g_interfaces[api].version)
     {
@@ -667,7 +667,7 @@ int GetCurrentLine(unsigned long api, const lua_Debug* ar)
     }
 }
 
-int GetLineDefined(unsigned long api, const lua_Debug* ar)
+int GetLineDefined(int api, const lua_Debug* ar)
 {
     switch( g_interfaces[api].version)
     {
@@ -676,7 +676,7 @@ int GetLineDefined(unsigned long api, const lua_Debug* ar)
     }
 }
 
-int GetLastLineDefined(unsigned long api, const lua_Debug* ar)
+int GetLastLineDefined(int api, const lua_Debug* ar)
 {
     switch( g_interfaces[api].version)
     {
@@ -685,7 +685,7 @@ int GetLastLineDefined(unsigned long api, const lua_Debug* ar)
     }
 }
 
-const char* GetSource(unsigned long api, const lua_Debug* ar)
+const char* GetSource(int api, const lua_Debug* ar)
 {
     switch( g_interfaces[api].version)
     {
@@ -694,7 +694,7 @@ const char* GetSource(unsigned long api, const lua_Debug* ar)
     }
 }
 
-const char* GetWhat(unsigned long api, const lua_Debug* ar)
+const char* GetWhat(int api, const lua_Debug* ar)
 {
     switch( g_interfaces[api].version)
     {
@@ -703,7 +703,7 @@ const char* GetWhat(unsigned long api, const lua_Debug* ar)
     }
 }
 
-const char* GetName(unsigned long api, const lua_Debug* ar)
+const char* GetName(int api, const lua_Debug* ar)
 {
     switch( g_interfaces[api].version)
     {
@@ -712,7 +712,7 @@ const char* GetName(unsigned long api, const lua_Debug* ar)
     }
 }
 
-const char* GetHookEventName(unsigned long api, const lua_Debug* ar)
+const char* GetHookEventName(int api, const lua_Debug* ar)
 {
     int event = GetEvent( api, ar);
     const char* eventType = "Unknown";
@@ -740,7 +740,7 @@ const char* GetHookEventName(unsigned long api, const lua_Debug* ar)
     return eventType;
 }
 
-bool lua_pushthread_dll(unsigned long api, lua_State *L)
+bool lua_pushthread_dll(int api, lua_State *L)
 {
 
     // These structures are taken out of the Lua 5.0 source code.
@@ -867,7 +867,7 @@ bool lua_pushthread_dll(unsigned long api, lua_State *L)
 
 }
 
-void* lua_newuserdata_dll(unsigned long api, lua_State *L, size_t size)
+void* lua_newuserdata_dll(int api, lua_State *L, size_t size)
 {
     return g_interfaces[api].lua_newuserdata_dll(L, size);
 }
@@ -892,23 +892,23 @@ bool GetAreInterceptsEnabled()
     return value <= 0;
 }
 
-void RegisterDebugLibrary(unsigned long api, lua_State* L)
+void RegisterDebugLibrary(int api, lua_State* L)
 {
     lua_register_dll(api, L, "decoda_output", g_interfaces[api].DecodaOutput);
 }
 
-int GetGlobalsIndex(unsigned long api)
+int GetGlobalsIndex(int api)
 {
     assert( g_interfaces[api].version >= 500 && g_interfaces[api].version < 520);
     return g_interfaces[api].globalsIndex;
 }
 
-int GetRegistryIndex(unsigned long api)
+int GetRegistryIndex(int api)
 {
     return g_interfaces[api].registryIndex;
 }
 
-int lua_absindex_dll(unsigned long api, lua_State* L, int i)
+int lua_absindex_dll(int api, lua_State* L, int i)
 {
     if (g_interfaces[api].lua_absindex_dll)
 {
@@ -926,7 +926,7 @@ int lua_absindex_dll(unsigned long api, lua_State* L, int i)
     }
 }
 
-int lua_upvalueindex_dll(unsigned long api, int i)
+int lua_upvalueindex_dll(int api, int i)
 {
    if( g_interfaces[api].version >= 520)
     {
@@ -938,7 +938,7 @@ int lua_upvalueindex_dll(unsigned long api, int i)
 }
 }
 
-void lua_setglobal_dll(unsigned long api, lua_State* L, const char* s)
+void lua_setglobal_dll(int api, lua_State* L, const char* s)
 {
     if (g_interfaces[api].lua_setglobal_dll != NULL)
     {
@@ -950,7 +950,7 @@ void lua_setglobal_dll(unsigned long api, lua_State* L, const char* s)
     }
 }
 
-void lua_getglobal_dll(unsigned long api, lua_State* L, const char* s)
+void lua_getglobal_dll(int api, lua_State* L, const char* s)
 {
     if (g_interfaces[api].lua_getglobal_dll)
     {
@@ -962,7 +962,7 @@ void lua_getglobal_dll(unsigned long api, lua_State* L, const char* s)
     }
 }
 
-void lua_rawgetglobal_dll(unsigned long api, lua_State* L, const char* s)
+void lua_rawgetglobal_dll(int api, lua_State* L, const char* s)
 {
     lua_pushglobaltable_dll(api, L);
     int glb = lua_gettop_dll(api, L);
@@ -971,93 +971,93 @@ void lua_rawgetglobal_dll(unsigned long api, lua_State* L, const char* s)
     lua_remove_dll(api, L, glb);
 }
 
-lua_State* lua_newstate_dll(unsigned long api, lua_Alloc f, void* ud)
+lua_State* lua_newstate_dll(int api, lua_Alloc f, void* ud)
 {
   return g_interfaces[api].lua_newstate_dll(f, ud);
 }
 
-void lua_close_dll(unsigned long api, lua_State* L)
+void lua_close_dll(int api, lua_State* L)
 {
     g_interfaces[api].lua_close_dll(L);
 }
 
-lua_State* lua_newthread_dll(unsigned long api, lua_State* L)
+lua_State* lua_newthread_dll(int api, lua_State* L)
 {
     return g_interfaces[api].lua_newthread_dll(L);
 }
 
-int lua_error_dll(unsigned long api, lua_State* L)
+int lua_error_dll(int api, lua_State* L)
 {
   return g_interfaces[api].lua_error_dll(L);
 }
 
-int lua_sethook_dll(unsigned long api, lua_State* L, lua_Hook f, int mask, int count)
+int lua_sethook_dll(int api, lua_State* L, lua_Hook f, int mask, int count)
 {
     return g_interfaces[api].lua_sethook_dll(L, f, mask, count);
 }
 
-int lua_getinfo_dll(unsigned long api, lua_State* L, const char* what, lua_Debug* ar)
+int lua_getinfo_dll(int api, lua_State* L, const char* what, lua_Debug* ar)
 {
     return g_interfaces[api].lua_getinfo_dll(L, what, ar);
 }
 
-void lua_remove_dll(unsigned long api, lua_State* L, int index)
+void lua_remove_dll(int api, lua_State* L, int index)
 {
     g_interfaces[api].lua_remove_dll(L, index);
 }
 
-void lua_settable_dll(unsigned long api, lua_State* L, int index)
+void lua_settable_dll(int api, lua_State* L, int index)
 {
     g_interfaces[api].lua_settable_dll(L, index);
 }
 
-void lua_gettable_dll(unsigned long api, lua_State* L, int index)
+void lua_gettable_dll(int api, lua_State* L, int index)
 {
     g_interfaces[api].lua_gettable_dll(L, index);
 }
 
-void lua_rawget_dll(unsigned long api, lua_State* L, int idx)
+void lua_rawget_dll(int api, lua_State* L, int idx)
 {
     g_interfaces[api].lua_rawget_dll(L, idx);
 }
 
-void lua_rawgeti_dll(unsigned long api, lua_State *L, int idx, int n)
+void lua_rawgeti_dll(int api, lua_State *L, int idx, int n)
 {
 
     g_interfaces[api].lua_rawgeti_dll(L, idx, n);
 }
 
-void lua_rawset_dll(unsigned long api, lua_State* L, int idx)
+void lua_rawset_dll(int api, lua_State* L, int idx)
 {
     g_interfaces[api].lua_rawset_dll(L, idx);
 }
 
-void lua_pushstring_dll(unsigned long api, lua_State* L, const char* s)
+void lua_pushstring_dll(int api, lua_State* L, const char* s)
 {
     g_interfaces[api].lua_pushstring_dll(L, s);
 }
 
-void lua_pushlstring_dll(unsigned long api, lua_State* L, const char* s, size_t len)
+void lua_pushlstring_dll(int api, lua_State* L, const char* s, size_t len)
 {
     g_interfaces[api].lua_pushlstring_dll(L, s, len);
 }
 
-int lua_type_dll(unsigned long api, lua_State* L, int index)
+int lua_type_dll(int api, lua_State* L, int index)
 {
     return g_interfaces[api].lua_type_dll(L, index);
 }
 
-const char* lua_typename_dll(unsigned long api, lua_State* L, int type)
+const char* lua_typename_dll(int api, lua_State* L, int type)
 {
     return g_interfaces[api].lua_typename_dll(L, type);
 }
 
-int lua_checkstack_dll(unsigned long api, lua_State* L, int extra)
+int lua_checkstack_dll(int api, lua_State* L, int extra)
 {
     return g_interfaces[api].lua_checkstack_dll(L, extra);
 }
 
-void lua_getfield_dll(unsigned long api, lua_State* L, int index, const char* k)
+void lua_getfield_dll(int api, lua_State* L, int index, const char* k)
 {
 
     // Since Lua 4.0 doesn't include lua_getfield, we just emulate its
@@ -1070,7 +1070,7 @@ void lua_getfield_dll(unsigned long api, lua_State* L, int index, const char* k)
 
 }
 
-void lua_setfield_dll(unsigned long api, lua_State* L, int index, const char* k)
+void lua_setfield_dll(int api, lua_State* L, int index, const char* k)
 {
 
     // Since Lua 4.0 doesn't include lua_setfield, we just emulate its
@@ -1084,53 +1084,53 @@ void lua_setfield_dll(unsigned long api, lua_State* L, int index, const char* k)
 
 }
 
-void lua_settop_dll(unsigned long api, lua_State* L, int index)
+void lua_settop_dll(int api, lua_State* L, int index)
 {
     g_interfaces[api].lua_settop_dll(L, index);
 }
 
-const char* lua_getlocal_dll(unsigned long api, lua_State* L, const lua_Debug* ar, int n)
+const char* lua_getlocal_dll(int api, lua_State* L, const lua_Debug* ar, int n)
 {
     return g_interfaces[api].lua_getlocal_dll(L, ar, n);
 }
 
-const char* lua_setlocal_dll(unsigned long api, lua_State* L, const lua_Debug* ar, int n)
+const char* lua_setlocal_dll(int api, lua_State* L, const lua_Debug* ar, int n)
 {
 
     return g_interfaces[api].lua_setlocal_dll(L, ar, n);
 }
 
-int lua_getstack_dll(unsigned long api, lua_State* L, int level, lua_Debug* ar)
+int lua_getstack_dll(int api, lua_State* L, int level, lua_Debug* ar)
 {
     return g_interfaces[api].lua_getstack_dll(L, level, ar);
 }
 
-void lua_insert_dll(unsigned long api, lua_State* L, int index)
+void lua_insert_dll(int api, lua_State* L, int index)
 {
     g_interfaces[api].lua_insert_dll(L, index);
 }
 
-void lua_pushnil_dll(unsigned long api, lua_State* L)
+void lua_pushnil_dll(int api, lua_State* L)
 {
     g_interfaces[api].lua_pushnil_dll(L);
 }
 
-void lua_pushcclosure_dll(unsigned long api, lua_State* L, lua_CFunction fn, int n)
+void lua_pushcclosure_dll(int api, lua_State* L, lua_CFunction fn, int n)
 {
     g_interfaces[api].lua_pushcclosure_dll(L, fn, n);
 }
 
-void lua_pushvalue_dll(unsigned long api, lua_State* L, int index)
+void lua_pushvalue_dll(int api, lua_State* L, int index)
 {
     g_interfaces[api].lua_pushvalue_dll(L, index);
 }
 
-void lua_pushnumber_dll(unsigned long api, lua_State* L, lua_Number value)
+void lua_pushnumber_dll(int api, lua_State* L, lua_Number value)
 {
     g_interfaces[api].lua_pushnumber_dll(L, value);
 }
 
-void lua_pushinteger_dll(unsigned long api, lua_State* L, int value)
+void lua_pushinteger_dll(int api, lua_State* L, int value)
 {
     if (g_interfaces[api].lua_pushinteger_dll) 
     {
@@ -1144,12 +1144,12 @@ void lua_pushinteger_dll(unsigned long api, lua_State* L, int value)
     }
 }
 
-void lua_pushlightuserdata_dll(unsigned long api, lua_State* L, void* p)
+void lua_pushlightuserdata_dll(int api, lua_State* L, void* p)
 {
     g_interfaces[api].lua_pushlightuserdata_dll(L, p);
 }
 
-void lua_pushglobaltable_dll(unsigned long api, lua_State* L)
+void lua_pushglobaltable_dll(int api, lua_State* L)
 {
     if( g_interfaces[api].version >= 520)
     {
@@ -1161,26 +1161,26 @@ void lua_pushglobaltable_dll(unsigned long api, lua_State* L)
     }
 }
 
-const char* lua_tostring_dll(unsigned long api, lua_State* L, int index)
+const char* lua_tostring_dll(int api, lua_State* L, int index)
 {
     return g_interfaces[api].lua_tolstring_dll(L, index, NULL);
 }
 
-const char* lua_tolstring_dll(unsigned long api, lua_State* L, int index, size_t* len)
+const char* lua_tolstring_dll(int api, lua_State* L, int index, size_t* len)
 {
     return g_interfaces[api].lua_tolstring_dll(L, index, len);
 }
 
-int lua_toboolean_dll(unsigned long api, lua_State* L, int index)
+int lua_toboolean_dll(int api, lua_State* L, int index)
 {
-        return g_interfaces[api].lua_toboolean_dll(L, index);
+    return g_interfaces[api].lua_toboolean_dll(L, index);
 }
 
-int lua_tointeger_dll(unsigned long api, lua_State* L, int index)
+int lua_tointeger_dll(int api, lua_State* L, int index)
 {
     if (g_interfaces[api].lua_tointegerx_dll) {
         // Lua 5.2 implementation.
-        return g_interfaces[api].lua_tointegerx_dll(L, index, NULL);
+        return (int)g_interfaces[api].lua_tointegerx_dll(L, index, NULL);
     }
     else 
     {
@@ -1189,12 +1189,12 @@ int lua_tointeger_dll(unsigned long api, lua_State* L, int index)
     }
 }
 
-lua_CFunction lua_tocfunction_dll(unsigned long api, lua_State* L, int index)
+lua_CFunction lua_tocfunction_dll(int api, lua_State* L, int index)
 {
-        return g_interfaces[api].lua_tocfunction_dll(L, index);
+    return g_interfaces[api].lua_tocfunction_dll(L, index);
 }
 
-lua_Number lua_tonumber_dll(unsigned long api, lua_State* L, int index)
+lua_Number lua_tonumber_dll(int api, lua_State* L, int index)
 {
     if (g_interfaces[api].lua_tonumberx_dll)
     {
@@ -1207,17 +1207,17 @@ lua_Number lua_tonumber_dll(unsigned long api, lua_State* L, int index)
     }
 }
 
-void* lua_touserdata_dll(unsigned long api, lua_State *L, int index)
+void* lua_touserdata_dll(int api, lua_State *L, int index)
 {
     return g_interfaces[api].lua_touserdata_dll(L, index);
 }
 
-int lua_gettop_dll(unsigned long api, lua_State* L)
+int lua_gettop_dll(int api, lua_State* L)
 {
     return g_interfaces[api].lua_gettop_dll(L);
 }
 
-int lua_loadbuffer_dll(unsigned long api, lua_State* L, const char* buffer, size_t size, const char* chunkname, const char* mode)
+int lua_loadbuffer_dll(int api, lua_State* L, const char* buffer, size_t size, const char* chunkname, const char* mode)
 {
 
     Memory memory;
@@ -1238,17 +1238,17 @@ int lua_loadbuffer_dll(unsigned long api, lua_State* L, const char* buffer, size
     return 0;
 }
 
-void lua_call_dll(unsigned long api, lua_State* L, int nargs, int nresults)
+void lua_call_dll(int api, lua_State* L, int nargs, int nresults)
 {
     return g_interfaces[api].lua_call_dll(L, nargs, nresults);
 }
 
-int lua_pcallk_dll(unsigned long api, lua_State* L, int nargs, int nresults, int errfunc, int ctx, lua_CFunction k)
+int lua_pcallk_dll(int api, lua_State* L, int nargs, int nresults, int errfunc, int ctx, lua_CFunction k)
 {
     return g_interfaces[api].lua_pcallk_dll(L, nargs, nresults, errfunc, ctx, k);
 }
 
-int lua_pcall_dll(unsigned long api, lua_State* L, int nargs, int nresults, int errfunc)
+int lua_pcall_dll(int api, lua_State* L, int nargs, int nresults, int errfunc)
 {
     // Lua 5.2.
     if (g_interfaces[api].lua_pcallk_dll)
@@ -1262,32 +1262,32 @@ int lua_pcall_dll(unsigned long api, lua_State* L, int nargs, int nresults, int 
     }
 }
 
-void lua_newtable_dll(unsigned long api, lua_State* L)
+void lua_newtable_dll(int api, lua_State* L)
 {
     g_interfaces[api].lua_createtable_dll(L, 0, 0);
 }
 
-int lua_next_dll(unsigned long api, lua_State* L, int index)
+int lua_next_dll(int api, lua_State* L, int index)
 {
     return g_interfaces[api].lua_next_dll(L, index);
 }
 
-int lua_rawequal_dll(unsigned long api, lua_State *L, int idx1, int idx2)
+int lua_rawequal_dll(int api, lua_State *L, int idx1, int idx2)
 {
     return g_interfaces[api].lua_rawequal_dll(L, idx1, idx2);
 }
 
-int lua_getmetatable_dll(unsigned long api, lua_State* L, int index)
+int lua_getmetatable_dll(int api, lua_State* L, int index)
 {
     return g_interfaces[api].lua_getmetatable_dll(L, index);
 }
 
-int lua_setmetatable_dll(unsigned long api, lua_State* L, int index)
+int lua_setmetatable_dll(int api, lua_State* L, int index)
 {
     return g_interfaces[api].lua_setmetatable_dll(L, index);
 }
 
-int luaL_ref_dll(unsigned long api, lua_State *L, int t)
+int luaL_ref_dll(int api, lua_State *L, int t)
 {
     if (g_interfaces[api].luaL_ref_dll)
     {
@@ -1298,42 +1298,42 @@ int luaL_ref_dll(unsigned long api, lua_State *L, int t)
     return LUA_NOREF;
 }
 
-void luaL_unref_dll(unsigned long api, lua_State *L, int t, int ref)
+void luaL_unref_dll(int api, lua_State *L, int t, int ref)
 {
     g_interfaces[api].luaL_unref_dll(L, t, ref);
 }
 
-int luaL_newmetatable_dll(unsigned long api, lua_State *L, const char *tname)
+int luaL_newmetatable_dll(int api, lua_State *L, const char *tname)
 {
     return g_interfaces[api].luaL_newmetatable_dll(L, tname);
 }
 
-int luaL_loadbuffer_dll(unsigned long api, lua_State *L, const char *buff, size_t sz, const char *name)
+int luaL_loadbuffer_dll(int api, lua_State *L, const char *buff, size_t sz, const char *name)
 {
         return g_interfaces[api].luaL_loadbuffer_dll(L, buff, sz, name);
 }
 
-int luaL_loadbufferx_dll(unsigned long api, lua_State *L, const char *buff, size_t sz, const char *name, const char* mode)
+int luaL_loadbufferx_dll(int api, lua_State *L, const char *buff, size_t sz, const char *name, const char* mode)
 {
         return g_interfaces[api].luaL_loadbufferx_dll(L, buff, sz, name, mode);
 }
 
-int luaL_loadfile_dll(unsigned long api, lua_State* L, const char* fileName)
+int luaL_loadfile_dll(int api, lua_State* L, const char* fileName)
 {
         return g_interfaces[api].luaL_loadfile_dll(L, fileName);
 }
 
-int luaL_loadfilex_dll(unsigned long api, lua_State* L, const char* fileName, const char* mode)
+int luaL_loadfilex_dll(int api, lua_State* L, const char* fileName, const char* mode)
 {
         return g_interfaces[api].luaL_loadfilex_dll(L, fileName, mode);
 }
 
-lua_State* luaL_newstate_dll(unsigned long api)
+lua_State* luaL_newstate_dll(int api)
 {
         return g_interfaces[api].luaL_newstate_dll();
 }
 
-const lua_WChar* lua_towstring_dll(unsigned long api, lua_State* L, int index)
+const lua_WChar* lua_towstring_dll(int api, lua_State* L, int index)
 {
     if (g_interfaces[api].lua_towstring_dll)
     {
@@ -1346,7 +1346,7 @@ const lua_WChar* lua_towstring_dll(unsigned long api, lua_State* L, int index)
     }
 }
 
-int lua_iswstring_dll(unsigned long api, lua_State* L, int index)
+int lua_iswstring_dll(int api, lua_State* L, int index)
 {
     if (g_interfaces[api].lua_iswstring_dll)
     {
@@ -1359,17 +1359,17 @@ int lua_iswstring_dll(unsigned long api, lua_State* L, int index)
     }
 }
 
-const char* lua_getupvalue_dll(unsigned long api, lua_State *L, int funcindex, int n)
+const char* lua_getupvalue_dll(int api, lua_State *L, int funcindex, int n)
 {
     return g_interfaces[api].lua_getupvalue_dll(L, funcindex, n);
 }
 
-const char* lua_setupvalue_dll(unsigned long api, lua_State *L, int funcindex, int n)
+const char* lua_setupvalue_dll(int api, lua_State *L, int funcindex, int n)
 {
     return g_interfaces[api].lua_setupvalue_dll(L, funcindex, n);
 }
 
-void lua_getfenv_dll(unsigned long api, lua_State *L, int index)
+void lua_getfenv_dll(int api, lua_State *L, int index)
 {
     if (g_interfaces[api].lua_getfenv_dll)
     {
@@ -1394,7 +1394,7 @@ void lua_getfenv_dll(unsigned long api, lua_State *L, int index)
     }
 }
 
-int lua_setfenv_dll(unsigned long api, lua_State *L, int index)
+int lua_setfenv_dll(int api, lua_State *L, int index)
 {
     if (g_interfaces[api].lua_setfenv_dll)
     {
@@ -1455,7 +1455,7 @@ HMODULE WINAPI LoadLibraryExW_intercept(LPCWSTR fileName, HANDLE hFile, DWORD dw
 
 }
 
-void FinishLoadingLua(unsigned long api, bool stdcall)
+void FinishLoadingLua(int api)
 {
 
     if (g_interfaces[api].finishedLoading)
@@ -1463,89 +1463,6 @@ void FinishLoadingLua(unsigned long api, bool stdcall)
         return;
     }
 
-    g_interfaces[api].stdcall = stdcall;
-
-#if !DECODA_X64
-
-#define SET_STDCALL(function)                               \
-        if ( g_interfaces[api].function##_dll) {                \
-             g_interfaces[api].function##_dll.SetStdcall();     \
-        }
-
-    if (stdcall)
-    {
-        SET_STDCALL(lua_newstate);
-        SET_STDCALL(lua_open);
-        SET_STDCALL(lua_open_500);
-        SET_STDCALL(lua_newstate);
-        SET_STDCALL(lua_newthread);
-        SET_STDCALL(lua_close);
-        SET_STDCALL(lua_error);
-        SET_STDCALL(lua_absindex);
-        SET_STDCALL(lua_sethook);
-        SET_STDCALL(lua_getinfo);
-        SET_STDCALL(lua_remove);
-        SET_STDCALL(lua_settable);
-        SET_STDCALL(lua_gettable);
-        SET_STDCALL(lua_setglobal);
-        SET_STDCALL(lua_getglobal);
-        SET_STDCALL(lua_rawget);
-        SET_STDCALL(lua_rawgeti);
-        SET_STDCALL(lua_rawset);
-        SET_STDCALL(lua_pushstring);
-        SET_STDCALL(lua_pushlstring);
-        SET_STDCALL(lua_type);
-        SET_STDCALL(lua_typename);
-        SET_STDCALL(lua_settop);
-        SET_STDCALL(lua_gettop);
-        SET_STDCALL(lua_getlocal);
-        SET_STDCALL(lua_setlocal);
-        SET_STDCALL(lua_getstack);
-        SET_STDCALL(lua_insert);
-        SET_STDCALL(lua_pushnil);
-        SET_STDCALL(lua_pushvalue);
-        SET_STDCALL(lua_pushinteger);
-        SET_STDCALL(lua_pushnumber);
-        SET_STDCALL(lua_pushcclosure);
-        SET_STDCALL(lua_pushlightuserdata);
-        SET_STDCALL(lua_tostring);
-        SET_STDCALL(lua_tolstring);
-        SET_STDCALL(lua_toboolean);
-        SET_STDCALL(lua_tointeger);
-        SET_STDCALL(lua_tointegerx);
-        SET_STDCALL(lua_tocfunction);
-        SET_STDCALL(lua_tonumber);
-        SET_STDCALL(lua_tonumberx);
-        SET_STDCALL(lua_touserdata);
-        SET_STDCALL(lua_call);
-        SET_STDCALL(lua_callk);
-        SET_STDCALL(lua_pcall);
-        SET_STDCALL(lua_pcallk);
-        SET_STDCALL(lua_newtable);
-        SET_STDCALL(lua_createtable);
-        SET_STDCALL(lua_load);
-        SET_STDCALL(lua_load_510);
-        SET_STDCALL(lua_next);
-        SET_STDCALL(lua_rawequal);
-        SET_STDCALL(lua_getmetatable);
-        SET_STDCALL(lua_setmetatable);
-        SET_STDCALL(luaL_ref);
-        SET_STDCALL(luaL_unref);
-        SET_STDCALL(luaL_newmetatable);
-        SET_STDCALL(luaL_loadbuffer);
-        SET_STDCALL(luaL_loadbufferx);
-        SET_STDCALL(luaL_loadfile);
-        SET_STDCALL(luaL_loadfilex);
-        SET_STDCALL(lua_getupvalue);
-        SET_STDCALL(lua_setupvalue);
-        SET_STDCALL(lua_getfenv);
-        SET_STDCALL(lua_setfenv);
-        SET_STDCALL(lua_pushthread);
-        SET_STDCALL(lua_newuserdata);
-        SET_STDCALL(lua_pushthread);
-        SET_STDCALL(lua_checkstack);
-    }
-#endif      
     g_interfaces[api].finishedLoading = true;
 
     DebugBackend::Get().CreateApi(api);
@@ -1553,13 +1470,13 @@ void FinishLoadingLua(unsigned long api, bool stdcall)
 }
 
 #pragma auto_inline(off)
-void lua_call_worker(unsigned long api, lua_State* L, int nargs, int nresults, bool& stdcall)
+void lua_call_worker(int api, lua_State* L, int nargs, int nresults)
 {
 
     if (!g_interfaces[api].finishedLoading)
     {
-        stdcall = g_interfaces[api].lua_call_dll.GetIsStdCallConvention(L, nargs, nresults);
-        FinishLoadingLua(api, stdcall);
+        g_interfaces[api].lua_call_dll(L, nargs, nresults);
+        FinishLoadingLua(api);
         DebugBackend::Get().AttachState(api, L);
     
     }
@@ -1567,11 +1484,6 @@ void lua_call_worker(unsigned long api, lua_State* L, int nargs, int nresults, b
     {
 
         DebugBackend::Get().AttachState(api, L);
-
-        if (g_interfaces[api].lua_call_dll)
-        {
-            stdcall = g_interfaces[api].lua_call_dll.GetIsStdCall();
-        }
 
         if (lua_gettop_dll(api, L) < nargs + 1)
         {
@@ -1588,33 +1500,14 @@ void lua_call_worker(unsigned long api, lua_State* L, int nargs, int nresults, b
 }
 #pragma auto_inline()
 
-// This function cannot be called like a normal function. It changes its
-// calling convention at run-time and removes and extra argument from the stack.
-NAKED void lua_call_intercept(unsigned long api, lua_State* L, int nargs, int nresults)
-{
-    
-    bool stdcall;
-
-    INTERCEPT_PROLOG()
-
-    // We push the actual functionality of this function into a separate, "normal"
-    // function so avoid interferring with the inline assembly and other strange
-    // aspects of this function.
-    lua_call_worker(api, L, nargs, nresults, stdcall);
-
-    INTERCEPT_EPILOG_NO_RETURN(12)
-
-}
-
-#pragma auto_inline(off)
-void lua_callk_worker(unsigned long api, lua_State* L, int nargs, int nresults, int ctk, lua_CFunction k, bool& stdcall)
+void lua_callk_worker(int api, lua_State* L, int nargs, int nresults, int ctk, lua_CFunction k)
 {
 
     if (!g_interfaces[api].finishedLoading)
     {
-        stdcall = g_interfaces[api].lua_callk_dll.GetIsStdCallConvention(L, nargs, nresults, ctk, k);
+        g_interfaces[api].lua_callk_dll(L, nargs, nresults, ctk, k);
 
-        FinishLoadingLua(api, stdcall);
+        FinishLoadingLua(api);
         DebugBackend::Get().AttachState(api, L);
     
     }
@@ -1622,11 +1515,6 @@ void lua_callk_worker(unsigned long api, lua_State* L, int nargs, int nresults, 
     {
 
         DebugBackend::Get().AttachState(api, L);
-
-        if (g_interfaces[api].lua_callk_dll)
-        {
-            stdcall = g_interfaces[api].lua_callk_dll.GetIsStdCall();
-        }
 
         if (lua_gettop_dll(api, L) < nargs + 1)
         {
@@ -1643,35 +1531,17 @@ void lua_callk_worker(unsigned long api, lua_State* L, int nargs, int nresults, 
 }
 #pragma auto_inline()
 
-// This function cannot be called like a normal function. It changes its
-// calling convention at run-time and removes and extra argument from the stack.
-NAKED void lua_callk_intercept(unsigned long api, lua_State* L, int nargs, int nresults, int ctx, lua_CFunction k)
-{
-    
-    bool stdcall;
-
-    INTERCEPT_PROLOG()
-
-    // We push the actual functionality of this function into a separate, "normal"
-    // function so avoid interferring with the inline assembly and other strange
-    // aspects of this function.
-    lua_callk_worker(api, L, nargs, nresults, ctx, k, stdcall);
-
-    INTERCEPT_EPILOG_NO_RETURN(20)
-
-}
-
 
 #pragma auto_inline(off)
-int lua_pcall_worker(unsigned long api, lua_State* L, int nargs, int nresults, int errfunc, bool& stdcall)
+int lua_pcall_worker(int api, lua_State* L, int nargs, int nresults, int errfunc)
 {
 
     int result;
 
     if (!g_interfaces[api].finishedLoading)
     {
-        stdcall = g_interfaces[api].lua_pcall_dll.GetIsStdCallConvention(L, nargs, nresults, errfunc, result);
-        FinishLoadingLua(api, stdcall);
+        result = g_interfaces[api].lua_pcall_dll(L, nargs, nresults, errfunc);
+        FinishLoadingLua(api);
         DebugBackend::Get().AttachState(api, L);
     
     }
@@ -1679,11 +1549,6 @@ int lua_pcall_worker(unsigned long api, lua_State* L, int nargs, int nresults, i
     {
 
         DebugBackend::Get().AttachState(api, L);
-
-        if (g_interfaces[api].lua_pcall_dll)
-        {
-            stdcall = g_interfaces[api].lua_pcall_dll.GetIsStdCall();
-        }
 
         if (lua_gettop_dll(api, L) < nargs + 1)
         {
@@ -1706,36 +1571,18 @@ int lua_pcall_worker(unsigned long api, lua_State* L, int nargs, int nresults, i
 }
 #pragma auto_inline()
 
-// This function cannot be called like a normal function. It changes its
-// calling convention at run-time and removes and extra argument from the stack.
-NAKED int lua_pcall_intercept(unsigned long api, lua_State* L, int nargs, int nresults, int errfunc)
-{
-
-    int     result;
-    bool    stdcall;
-
-    INTERCEPT_PROLOG()
-
-    // We push the actual functionality of this function into a separate, "normal"
-    // function so avoid interferring with the inline assembly and other strange
-    // aspects of this function.
-    result = lua_pcall_worker(api, L, nargs, nresults, errfunc, stdcall);
-
-    INTERCEPT_EPILOG(16)
-
-}
 
 #pragma auto_inline(off)
-int lua_pcallk_worker(unsigned long api, lua_State* L, int nargs, int nresults, int errfunc, int ctx, lua_CFunction k, bool& stdcall)
+int lua_pcallk_worker(int api, lua_State* L, int nargs, int nresults, int errfunc, int ctx, lua_CFunction k)
 {
 
     int result;
 
     if (!g_interfaces[api].finishedLoading)
     {
-        stdcall = g_interfaces[api].lua_pcall_dll.GetIsStdCallConvention(L, nargs, nresults, errfunc, result);
+        result = g_interfaces[api].lua_pcall_dll(L, nargs, nresults, errfunc);
 
-        FinishLoadingLua(api, stdcall);
+        FinishLoadingLua(api);
         DebugBackend::Get().AttachState(api, L);
     
     }
@@ -1743,11 +1590,6 @@ int lua_pcallk_worker(unsigned long api, lua_State* L, int nargs, int nresults, 
     {
 
         DebugBackend::Get().AttachState(api, L);
-
-        if (g_interfaces[api].lua_pcallk_dll)
-        {
-            stdcall = g_interfaces[api].lua_pcallk_dll.GetIsStdCall();
-        }
 
         if (lua_gettop_dll(api, L) < nargs + 1)
         {
@@ -1770,40 +1612,20 @@ int lua_pcallk_worker(unsigned long api, lua_State* L, int nargs, int nresults, 
 }
 #pragma auto_inline()
 
-// This function cannot be called like a normal function. It changes its
-// calling convention at run-time and removes and extra argument from the stack.
-NAKED int lua_pcallk_intercept(unsigned long api, lua_State* L, int nargs, int nresults, int errfunc, int ctx, lua_CFunction k)
-{
-
-    int     result;
-    bool    stdcall;
-
-    INTERCEPT_PROLOG()
-
-    // We push the actual functionality of this function into a separate, "normal"
-    // function so avoid interferring with the inline assembly and other strange
-    // aspects of this function.
-    result = lua_pcallk_worker(api, L, nargs, nresults, errfunc, ctx, k, stdcall);
-
-    INTERCEPT_EPILOG(24)
-
-}
-
 #pragma auto_inline(off)
-lua_State* lua_newstate_worker(unsigned long api, lua_Alloc f, void* ud, bool& stdcall)
+lua_State* lua_newstate_worker(int api, lua_Alloc f, void* ud)
 {
 
     lua_State* result = NULL;
 
     if (!g_interfaces[api].finishedLoading)
     {
-        stdcall = g_interfaces[api].lua_newstate_dll.GetIsStdCallConvention(f, ud, result);
-        FinishLoadingLua(api, stdcall);
+        result = g_interfaces[api].lua_newstate_dll(f, ud);
+        FinishLoadingLua(api);
     }
     else if (g_interfaces[api].lua_newstate_dll)
     {
         result = g_interfaces[api].lua_newstate_dll(f, ud);
-        stdcall = g_interfaces[api].lua_newstate_dll.GetIsStdCall();
     }
     
     if (result != NULL)
@@ -1816,40 +1638,20 @@ lua_State* lua_newstate_worker(unsigned long api, lua_Alloc f, void* ud, bool& s
 }
 #pragma auto_inline()
 
-// This function cannot be called like a normal function. It changes its
-// calling convention at run-time and removes and extra argument from the stack.
-NAKED lua_State* lua_newstate_intercept(unsigned long api, lua_Alloc f, void* ud)
-{
-
-    lua_State*      result;
-    bool            stdcall;
-
-    INTERCEPT_PROLOG()
-
-    // We push the actual functionality of this function into a separate, "normal"
-    // function so avoid interferring with the inline assembly and other strange
-    // aspects of this function.
-    result = lua_newstate_worker(api, f, ud, stdcall);
-
-    INTERCEPT_EPILOG(8)
-
-}
-
 #pragma auto_inline(off)
-lua_State* lua_newthread_worker(unsigned long api, lua_State* L, bool& stdcall)
+lua_State* lua_newthread_worker(int api, lua_State* L)
 {
     
     lua_State* result = NULL;
 
     if (!g_interfaces[api].finishedLoading)
     {
-        stdcall = g_interfaces[api].lua_newthread_dll.GetIsStdCallConvention(L, result);
-        FinishLoadingLua(api, stdcall);
+        result = g_interfaces[api].lua_newthread_dll(L);
+        FinishLoadingLua(api);
     }
     else if (g_interfaces[api].lua_newthread_dll)
     {
         result = g_interfaces[api].lua_newthread_dll(L);
-        stdcall = false;
     }
     
     if (result != NULL)
@@ -1862,40 +1664,20 @@ lua_State* lua_newthread_worker(unsigned long api, lua_State* L, bool& stdcall)
 }
 #pragma auto_inline()
 
-// This function cannot be called like a normal function. It changes its
-// calling convention at run-time and removes and extra argument from the stack.
-NAKED lua_State* lua_newthread_intercept(unsigned long api, lua_State* L)
-{
-
-    lua_State*      result;
-    bool            stdcall;
-
-    INTERCEPT_PROLOG()
-
-    // We push the actual functionality of this function into a separate, "normal"
-    // function so avoid interferring with the inline assembly and other strange
-    // aspects of this function.
-    result = lua_newthread_worker(api, L, stdcall);
-
-    INTERCEPT_EPILOG(4)
-
-}
-
 #pragma auto_inline(off)
-lua_State* lua_open_worker(unsigned long api, int stacksize, bool& stdcall)
+lua_State* lua_open_worker(int api, int stacksize)
 {
 
     lua_State* result = NULL;
 
     if (!g_interfaces[api].finishedLoading)
     {
-        stdcall = g_interfaces[api].lua_open_dll.GetIsStdCallConvention(stacksize, result);
-        FinishLoadingLua(api, stdcall);
+        result = g_interfaces[api].lua_open_dll(stacksize);
+        FinishLoadingLua(api);
     }
     else if (g_interfaces[api].lua_open_dll)
     {
         result = g_interfaces[api].lua_open_dll(stacksize);
-        stdcall = g_interfaces[api].lua_open_dll.GetIsStdCall();
     }
     
     if (result != NULL)
@@ -1909,31 +1691,19 @@ lua_State* lua_open_worker(unsigned long api, int stacksize, bool& stdcall)
 #pragma auto_inline()
 
 #pragma auto_inline(off)
-lua_State* lua_open_500_worker(unsigned long api, bool& stdcall)
+lua_State* lua_open_500_worker(int api)
 {
 
     lua_State* result = NULL;
 
     if (!g_interfaces[api].finishedLoading)
     {
-
-        // We can't test stdcall with the Lua 5.0 lua_open function since it doesn't
-        // take any arguments. To do the test, we create a dummy state and destroy it
-        // using the lua_close function to do the test.
-#if !DECODA_X64
-        lua_State* L = g_interfaces[api].lua_open_500_dll();
-        stdcall = GetIsStdCallConvention( g_interfaces[api].lua_close_dll.GetFunction(), (void*)L, (void**)&result);
-#else
-        stdcall = false;
-#endif
-        FinishLoadingLua(api, stdcall);
-
+        FinishLoadingLua(api);
     }
 
     if (g_interfaces[api].lua_open_500_dll)
     {
         result = g_interfaces[api].lua_open_500_dll();
-        stdcall = g_interfaces[api].lua_open_500_dll.GetIsStdCall();
     }
     
     if (result != NULL)
@@ -1946,52 +1716,9 @@ lua_State* lua_open_500_worker(unsigned long api, bool& stdcall)
 }
 #pragma auto_inline()
 
-// This function cannot be called like a normal function. It changes its
-// calling convention at run-time and removes and extra argument from the stack.
-NAKED lua_State* lua_open_intercept(unsigned long api, int stacksize)
-{
-
-    lua_State*      result;
-    bool            stdcall;
-
-    INTERCEPT_PROLOG()
-
-    // We push the actual functionality of this function into a separate, "normal"
-    // function so avoid interferring with the inline assembly and other strange
-    // aspects of this function.
-    result = lua_open_worker(api, stacksize, stdcall);
-
-    INTERCEPT_EPILOG(4)
-
-}
-
-// This function cannot be called like a normal function. It changes its
-// calling convention at run-time and removes and extra argument from the stack.
-NAKED lua_State* lua_open_500_intercept(unsigned long api)
-{
-
-    lua_State*      result;
-    bool            stdcall;
-
-    INTERCEPT_PROLOG()
-
-    // We push the actual functionality of this function into a separate, "normal"
-    // function so avoid interferring with the inline assembly and other strange
-    // aspects of this function.
-    result = lua_open_500_worker(api, stdcall);
-
-    INTERCEPT_EPILOG(0)
-
-}
-
 #pragma auto_inline(off)
-int lua_load_worker(unsigned long api, lua_State* L, lua_Reader reader, void* data, const char* name, const char* mode, bool& stdcall)
+int lua_load_worker(int api, lua_State* L, lua_Reader reader, void* data, const char* name, const char* mode)
 {
-
-    // If we haven't finished loading yet this will be wrong, but we'll fix it up
-    // when we access the reader function.
-    stdcall = g_interfaces[api].lua_load_dll.GetIsStdCall();
-
     // Read all of the data out of the reader and into a big buffer.
 
     std::vector<char> buffer;
@@ -2006,18 +1733,9 @@ int lua_load_worker(unsigned long api, lua_State* L, lua_Reader reader, void* da
         {
             // In this case we must have attached the debugger so we're intercepting a lua_load
             // function before we've initialized.
-#if DECODA_X64
             chunk = reader(L, data, &chunkSize);
-            stdcall = false;
-#else
-            stdcall = GetIsStdCallConvention(reader, L, data, &chunkSize, (void**)&chunk);
-#endif
-            FinishLoadingLua(api, stdcall);
-        }
-        else if (stdcall)
-        {
-            // We assume that since the lua_load function is stdcall the reader function is as well.
-            chunk = reinterpret_cast<lua_Reader_stdcall>(reader)(L, data, &chunkSize);
+
+            FinishLoadingLua(api);
         }
         else
         {
@@ -2071,57 +1789,17 @@ int lua_load_worker(unsigned long api, lua_State* L, lua_Reader reader, void* da
 }
 #pragma auto_inline()
 
-// This function cannot be called like a normal function. It changes its
-// calling convention at run-time and removes and extra argument from the stack.
-NAKED int lua_load_510_intercept(unsigned long api, lua_State* L, lua_Reader reader, void* data, const char* name)
-{
-    
-    bool    stdcall;
-    int     result;
-
-    INTERCEPT_PROLOG()
-
-    // We push the actual functionality of this function into a separate, "normal"
-    // function so avoid interferring with the inline assembly and other strange
-    // aspects of this function.
-    result = lua_load_worker(api, L, reader, data, name, NULL, stdcall);
-
-    INTERCEPT_EPILOG(16)
-
-}
-
-// This function cannot be called like a normal function. It changes its
-// calling convention at run-time and removes and extra argument from the stack.
-NAKED int lua_load_intercept(unsigned long api, lua_State* L, lua_Reader reader, void* data, const char* name, const char* mode)
-{
-    
-    bool    stdcall;
-    int     result;
-
-    INTERCEPT_PROLOG()
-
-    // We push the actual functionality of this function into a separate, "normal"
-    // function so avoid interferring with the inline assembly and other strange
-    // aspects of this function.
-    result = lua_load_worker(api, L, reader, data, name, mode, stdcall);
-
-    INTERCEPT_EPILOG(20)
-
-}
-
 #pragma auto_inline(off)
-void lua_close_worker(unsigned long api, lua_State* L, bool& stdcall)
+void lua_close_worker(int api, lua_State* L)
 {
     
     if (!g_interfaces[api].finishedLoading)
     {
-        stdcall = g_interfaces[api].lua_close_dll.GetIsStdCallConvention(L);
-        FinishLoadingLua(api, stdcall);
+        FinishLoadingLua(api);
     }
     else if (g_interfaces[api].lua_close_dll)
     {
         g_interfaces[api].lua_close_dll(L);
-        stdcall = g_interfaces[api].lua_close_dll.GetIsStdCall();
     }
 
     DebugBackend::Get().DetachState(api, L);
@@ -2129,39 +1807,19 @@ void lua_close_worker(unsigned long api, lua_State* L, bool& stdcall)
 }
 #pragma auto_inline()
 
-// This function cannot be called like a normal function. It changes its
-// calling convention at run-time and removes and extra argument from the stack.
-NAKED void lua_close_intercept(unsigned long api, lua_State* L)
-{
-    
-    bool    stdcall;
-
-    INTERCEPT_PROLOG()
-
-    // We push the actual functionality of this function into a separate, "normal"
-    // function so avoid interferring with the inline assembly and other strange
-    // aspects of this function.
-    lua_close_worker(api, L, stdcall);
-
-    INTERCEPT_EPILOG_NO_RETURN(4)
-
-}
-
 #pragma auto_inline(off)
-int luaL_newmetatable_worker(unsigned long api, lua_State *L, const char* tname, bool& stdcall)
+int luaL_newmetatable_worker(int api, lua_State *L, const char* tname)
 {
 
     int result;
 
     if (!g_interfaces[api].finishedLoading)
     {
-        stdcall = g_interfaces[api].luaL_newmetatable_dll.GetIsStdCallConvention(L, tname, result);
-        FinishLoadingLua(api, stdcall);
+        FinishLoadingLua(api);
     }
     else if (g_interfaces[api].luaL_newmetatable_dll)
     {
         result = g_interfaces[api].luaL_newmetatable_dll(L, tname);
-        stdcall = g_interfaces[api].luaL_newmetatable_dll.GetIsStdCall();
     }
 
     if (result != 0)
@@ -2175,27 +1833,8 @@ int luaL_newmetatable_worker(unsigned long api, lua_State *L, const char* tname,
 }
 #pragma auto_inline()
 
-// This function cannot be called like a normal function. It changes its
-// calling convention at run-time and removes and extra argument from the stack.
-NAKED int luaL_newmetatable_intercept(unsigned long api, lua_State* L, const char* tname)
-{
-
-    int     result;
-    bool    stdcall;
-
-    INTERCEPT_PROLOG()
-
-    // We push the actual functionality of this function into a separate, "normal"
-    // function so avoid interferring with the inline assembly and other strange
-    // aspects of this function.
-    result = luaL_newmetatable_worker(api, L, tname, stdcall);
-
-    INTERCEPT_EPILOG(8)
-
-}
-
 #pragma auto_inline(off)
-int lua_sethook_worker(unsigned long api, lua_State *L, lua_Hook f, int mask, int count, bool& stdcall)
+int lua_sethook_worker(int api, lua_State *L, lua_Hook f, int mask, int count)
 {
     
     // Currently we're using the hook and can't let anyone else use it.
@@ -2205,17 +1844,12 @@ int lua_sethook_worker(unsigned long api, lua_State *L, lua_Hook f, int mask, in
  
     if (!g_interfaces[api].finishedLoading)
     {
-        stdcall = g_interfaces[api].lua_sethook_dll.GetIsStdCallConvention(L, f, mask, count, result);
-        FinishLoadingLua(api, stdcall);
+        result = g_interfaces[api].lua_sethook_dll(L, f, mask, count);
+        FinishLoadingLua(api);
         DebugBackend::Get().AttachState(api, L);
     }
     else
     {
-        if (g_interfaces[api].luaL_newmetatable_dll)
-        {
-            stdcall = g_interfaces[api].luaL_newmetatable_dll.GetIsStdCall();
-        }
-
         // Note, the lua_hook call is currently bypassed.
     }
 
@@ -2224,45 +1858,24 @@ int lua_sethook_worker(unsigned long api, lua_State *L, lua_Hook f, int mask, in
 }
 #pragma auto_inline()
 
-// This function cannot be called like a normal function. It changes its
-// calling convention at run-time and removes and extra argument from the stack.
-NAKED int lua_sethook_intercept(unsigned long api, lua_State *L, lua_Hook f, int mask, int count)
-{
-
-    int     result;
-    bool    stdcall;
-
-    INTERCEPT_PROLOG()
-
-    // We push the actual functionality of this function into a separate, "normal"
-    // function so avoid interferring with the inline assembly and other strange
-    // aspects of this function.
-    result = lua_sethook_worker(api, L, f, mask, count, stdcall);
-
-    INTERCEPT_EPILOG(16)
-
-}
-
 #pragma auto_inline(off)
-int luaL_loadbufferx_worker(unsigned long api, lua_State *L, const char *buff, size_t sz, const char *name, const char* mode, bool& stdcall)
+int luaL_loadbufferx_worker(int api, lua_State *L, const char *buff, size_t sz, const char *name, const char* mode)
 {
 
     int result = 0;
 
     if (!g_interfaces[api].finishedLoading)
     {
-        stdcall = g_interfaces[api].luaL_loadbuffer_dll.GetIsStdCallConvention(L, buff, sz, name, result);
-        FinishLoadingLua(api, stdcall);
+        result = g_interfaces[api].luaL_loadbuffer_dll(L, buff, sz, name);
+        FinishLoadingLua(api);
     }
     else if (g_interfaces[api].luaL_loadbufferx_dll)
     {
         result = g_interfaces[api].luaL_loadbufferx_dll(L, buff, sz, name, mode);
-        stdcall = g_interfaces[api].luaL_loadbufferx_dll.GetIsStdCall();
     }
     else if (g_interfaces[api].luaL_loadbuffer_dll)
     {
         result = g_interfaces[api].luaL_loadbuffer_dll(L, buff, sz, name);
-        stdcall = g_interfaces[api].luaL_loadbuffer_dll.GetIsStdCall();
     }
 
     // Make sure the debugger knows about this state. This is necessary since we might have
@@ -2274,64 +1887,24 @@ int luaL_loadbufferx_worker(unsigned long api, lua_State *L, const char *buff, s
 }
 #pragma auto_inline()
 
-// This function cannot be called like a normal function. It changes its
-// calling convention at run-time and removes and extra argument from the stack.
-NAKED int luaL_loadbuffer_intercept(unsigned long api, lua_State *L, const char *buff, size_t sz, const char *name)
-{
-
-    int     result;
-    bool    stdcall;
-
-    INTERCEPT_PROLOG()
-
-    // We push the actual functionality of this function into a separate, "normal"
-    // function so avoid interfering with the inline assembly and other strange
-    // aspects of this function.
-    result = luaL_loadbufferx_worker(api, L, buff, sz, name, NULL, stdcall);
-
-    INTERCEPT_EPILOG(16)
-
-}
-
-// This function cannot be called like a normal function. It changes its
-// calling convention at run-time and removes and extra argument from the stack.
-NAKED int luaL_loadbufferx_intercept(unsigned long api, lua_State *L, const char *buff, size_t sz, const char *name, const char* mode)
-{
-
-    int     result;
-    bool    stdcall;
-
-    INTERCEPT_PROLOG()
-
-    // We push the actual functionality of this function into a separate, "normal"
-    // function so avoid interfering with the inline assembly and other strange
-    // aspects of this function.
-    result = luaL_loadbufferx_worker(api, L, buff, sz, name, mode, stdcall);
-
-    INTERCEPT_EPILOG(20)
-
-}
-
 #pragma auto_inline(off)
-int luaL_loadfilex_worker(unsigned long api, lua_State *L, const char *fileName, const char* mode, bool& stdcall)
+int luaL_loadfilex_worker(int api, lua_State *L, const char *fileName, const char* mode)
 {
 
     int result = 0;
 
     if (!g_interfaces[api].finishedLoading)
     {
-        stdcall = g_interfaces[api].luaL_loadfile_dll.GetIsStdCallConvention(L, fileName, result);
-        FinishLoadingLua(api, stdcall);
+        result = g_interfaces[api].luaL_loadfile_dll(L, fileName);
+        FinishLoadingLua(api);
     }
     else if (g_interfaces[api].luaL_loadfilex_dll)
     {
         result = g_interfaces[api].luaL_loadfilex_dll(L, fileName, mode);
-        stdcall = g_interfaces[api].luaL_loadfilex_dll.GetIsStdCall();
     }
     else if (g_interfaces[api].luaL_loadfile_dll)
     {
         result = g_interfaces[api].luaL_loadfile_dll(L, fileName);
-        stdcall = g_interfaces[api].luaL_loadfilex_dll.GetIsStdCall();
     }
 
     // Make sure the debugger knows about this state. This is necessary since we might have
@@ -2368,46 +1941,8 @@ int luaL_loadfilex_worker(unsigned long api, lua_State *L, const char *fileName,
 }
 #pragma auto_inline()
 
-// This function cannot be called like a normal function. It changes its
-// calling convention at run-time and removes and extra argument from the stack.
-NAKED int luaL_loadfile_intercept(unsigned long api, lua_State *L, const char *fileName)
-{
-
-    int     result;
-    bool    stdcall;
-
-    INTERCEPT_PROLOG()
-
-    // We push the actual functionality of this function into a separate, "normal"
-    // function so avoid interferring with the inline assembly and other strange
-    // aspects of this function.
-    result = luaL_loadfilex_worker(api, L, fileName, NULL, stdcall);
-
-    INTERCEPT_EPILOG(8)
-
-}
-
-// This function cannot be called like a normal function. It changes its
-// calling convention at run-time and removes and extra argument from the stack.
-NAKED int luaL_loadfilex_intercept(unsigned long api, lua_State *L, const char *fileName, const char* mode)
-{
-
-    int     result;
-    bool    stdcall;
-
-    INTERCEPT_PROLOG()
-
-    // We push the actual functionality of this function into a separate, "normal"
-    // function so avoid interferring with the inline assembly and other strange
-    // aspects of this function.
-    result = luaL_loadfilex_worker(api, L, fileName, mode, stdcall);
-
-    INTERCEPT_EPILOG(12)
-
-}
-
 #pragma auto_inline(off)
-lua_State* luaL_newstate_worker(unsigned long api, bool& stdcall)
+lua_State* luaL_newstate_worker(int api)
 {
 
     lua_State* result = g_interfaces[api].luaL_newstate_dll();
@@ -2418,8 +1953,7 @@ lua_State* luaL_newstate_worker(unsigned long api, bool& stdcall)
 
     if (!g_interfaces[api].finishedLoading && result != NULL)
     {
-        stdcall = g_interfaces[api].lua_gettop_dll.GetIsStdCallConvention(result);
-        FinishLoadingLua(api, stdcall);
+        FinishLoadingLua(api);
     }
     
     if (result != NULL)
@@ -2431,25 +1965,6 @@ lua_State* luaL_newstate_worker(unsigned long api, bool& stdcall)
 
 }
 #pragma auto_inline()
-
-// This function cannot be called like a normal function. It changes its
-// calling convention at run-time and removes and extra argument from the stack.
-NAKED lua_State* luaL_newstate_intercept(unsigned long api)
-{
-
-    lua_State*      result;
-    bool            stdcall;
-
-    INTERCEPT_PROLOG()
-    
-    // We push the actual functionality of this function into a separate, "normal"
-    // function so avoid interferring with the inline assembly and other strange
-    // aspects of this function.
-    result = luaL_newstate_worker(api, stdcall);
-
-    INTERCEPT_EPILOG(0)
-
-}
 
 std::string GetEnvironmentVariable(const std::string& name)
 {
@@ -2490,6 +2005,115 @@ std::string GetApplicationDirectory()
 
     return fileName;
 
+}
+
+static lua_State* luaL_newstate_intercept()
+{
+    int api = 0;
+    return  luaL_newstate_worker(api);
+}
+
+static lua_State* lua_newstate_intercept(lua_Alloc f, void* ud)
+{
+    int api = 0;
+    return lua_newstate_worker(api, f, ud);
+}
+
+static lua_State* lua_newthread_intercept(lua_State* L)
+{
+    int api = 0;
+    return lua_newthread_worker(api, L);
+}
+
+static lua_State* lua_open_intercept(int stacksize)
+{
+    int api = 0;
+    return lua_open_worker(api, stacksize);
+}
+
+static void lua_call_intercept(lua_State* L, int nargs, int nresults)
+{
+    int api = 0;
+    lua_call_worker(api, L, nargs, nresults);
+}
+
+static void lua_callk_intercept(lua_State* L, int nargs, int nresults, int ctx, lua_CFunction k)
+{
+    int api = 0;
+    lua_callk_worker(api, L, nargs, nresults, ctx, k);
+}
+
+static int lua_pcall_intercept(lua_State* L, int nargs, int nresults, int errfunc)
+{
+    int api = 0;
+    return lua_pcall_worker(api, L, nargs, nresults, errfunc);
+}
+
+
+static int lua_pcallk_intercept(lua_State* L, int nargs, int nresults, int errfunc, int ctx, lua_CFunction k)
+{
+    int api = 0;
+    return lua_pcallk_worker(api, L, nargs, nresults, errfunc, ctx, k);
+}
+
+static int lua_load_510_intercept(lua_State* L, lua_Reader reader, void* data, const char* name)
+{
+    int api = 0;
+    return lua_load_worker(api, L, reader, data, name, NULL);
+}
+
+static int lua_load_intercept(lua_State* L, lua_Reader reader, void* data, const char* name, const char* mode)
+{
+    int api = 0;
+    return lua_load_worker(api, L, reader, data, name, mode);
+}
+
+static void lua_close_intercept(lua_State* L)
+{
+    int api = 0;
+    lua_close_worker(api, L);
+}
+
+static int luaL_newmetatable_intercept(lua_State* L, const char* tname)
+{
+    int api = 0;
+    return luaL_newmetatable_worker(api, L, tname);
+}
+
+static int lua_sethook_intercept(lua_State *L, lua_Hook f, int mask, int count)
+{
+    int api = 0;
+    return lua_sethook_worker(api, L, f, mask, count);
+}
+
+static int luaL_loadbuffer_intercept(lua_State *L, const char *buff, size_t sz, const char *name)
+{
+    int api = 0;
+    return luaL_loadbufferx_worker(api, L, buff, sz, name, NULL);
+}
+
+static int luaL_loadbufferx_intercept(lua_State *L, const char *buff, size_t sz, const char *name, const char* mode)
+{
+    int api = 0;
+    return luaL_loadbufferx_worker(api, L, buff, sz, name, mode);
+}
+
+static lua_State* lua_open_500_intercept()
+{
+    int api = 0;
+    return lua_open_500_worker(api);
+}
+
+static int luaL_loadfile_intercept(lua_State *L, const char *fileName)
+{
+    int api = 0;
+    return luaL_loadfilex_worker(api, L, fileName, NULL);
+}
+
+static int luaL_loadfilex_intercept(lua_State *L, const char *fileName, const char* mode)
+{
+    int api = 0;
+    return luaL_loadfilex_worker(api, L, fileName, mode);
 }
 
 bool LoadLuaFunctions(const std::unordered_map<std::string, DWORD64>& symbols, HANDLE hProcess)
@@ -2533,7 +2157,7 @@ bool LoadLuaFunctions(const std::unordered_map<std::string, DWORD64>& symbols, H
     luaInterface.finishedLoading = false;
     luaInterface.stdcall         = false;
 
-    unsigned long api = g_interfaces.size();
+    int api = (int)g_interfaces.size();
 
     bool report = false;
 
@@ -2943,7 +2567,7 @@ BOOL CALLBACK FindSymbolsCallback(PSYMBOL_INFO pSymInfo, ULONG SymbolSize, PVOID
 bool ScanForSignature(DWORD64 start, DWORD64 length, const char* signature)
 {
 
-    unsigned int signatureLength = strlen(signature);
+    size_t signatureLength = strlen(signature);
 
     for (DWORD64 i = start; i < start + length - signatureLength; ++i)
     {
@@ -3300,15 +2924,6 @@ bool GetIsLuaLoaded()
     return g_loadedLuaFunctions;
 }
 
-bool GetIsStdCall(unsigned long api)
-{
-#if DECODA_X64
-  return false;
-#else
-  return g_interfaces[api].stdcall;
-#endif   
-}
-
 struct CFunctionArgs
 {
     unsigned long       api;
@@ -3316,9 +2931,8 @@ struct CFunctionArgs
 };
 
 #pragma auto_inline(off)
-int CFunctionHandlerWorker(CFunctionArgs* args, lua_State* L, bool& stdcall)
+int CFunctionHandlerWorker(CFunctionArgs* args, lua_State* L)
 {
-    stdcall = g_interfaces[args->api].stdcall;
     return args->function(args->api, L);
 }
 #pragma auto_inline()
@@ -3332,13 +2946,13 @@ NAKED int CFunctionHandler(CFunctionArgs* args, lua_State* L)
     INTERCEPT_PROLOG()
     
     stdcall = false;
-    result = CFunctionHandlerWorker(args, L, stdcall);
+    result = CFunctionHandlerWorker(args, L);
 
     INTERCEPT_EPILOG(4)
 
 }
 
-lua_CFunction CreateCFunction(unsigned long api, lua_CFunction_dll function)
+lua_CFunction CreateCFunction(int api, lua_CFunction_dll function)
 {
     
     // This is never deallocated, but it doesn't really matter since we never
