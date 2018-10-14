@@ -24,6 +24,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include <windows.h>
 #include <stdio.h>
 #include <assert.h>
+#include "detours.h"
 
 HANDLE g_trampolineHeap = NULL;
 
@@ -505,6 +506,27 @@ void* HookFunction(void* function, void* hook, unsigned long upValue)
     // Couldn't overwrite the function.
     return NULL;
 
+}
+
+void* HookFunction_Detours(void* function, void* hook)
+{
+  long status = 0;
+  status = DetourTransactionBegin();
+  if (status != NO_ERROR) {
+    return NULL;
+  }
+  DetourUpdateThread(GetCurrentThread());
+  void* trampoline = function;
+  status = DetourAttach(&trampoline, hook);
+  if (status != NO_ERROR)
+  {
+    return NULL;
+  }
+  status = DetourTransactionCommit();
+  if (status != NO_ERROR) {
+    return NULL;
+  }
+  return trampoline;
 }
 
 void* InstanceFunction(void* function, unsigned long upValue)

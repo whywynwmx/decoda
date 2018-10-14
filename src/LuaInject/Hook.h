@@ -37,6 +37,8 @@ bool GetIsHooked(void* function, void* hook);
  */
 void* HookFunction(void* function, void* hook);
 
+void* HookFunction_Detours(void* function, void* hook);
+
 /**
  * Installs a hook function that will be called instead of the original
  * function. The function returns a pointer to a new function that can
