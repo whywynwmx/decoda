@@ -125,10 +125,15 @@ DWORD WINAPI GetCStackThread(LPVOID p)
         
         STACKFRAME64 stackFrame;
         ZeroMemory(&stackFrame, sizeof(stackFrame));
-
-        stackFrame.AddrPC.Offset    = context.Eip;
+#if DECODA_X64
+        stackFrame.AddrPC.Offset    = context.Rip;
+        stackFrame.AddrStack.Offset = context.Rsp;
+        stackFrame.AddrFrame.Offset = context.Rbp;
+#else
+        stackFrame.AddrPC.Offset = context.Eip;
         stackFrame.AddrStack.Offset = context.Esp;
         stackFrame.AddrFrame.Offset = context.Ebp;
+#endif
         stackFrame.AddrPC.Mode      = AddrModeFlat;
         stackFrame.AddrStack.Mode   = AddrModeFlat;
         stackFrame.AddrFrame.Mode   = AddrModeFlat;
@@ -205,10 +210,15 @@ unsigned int GetCStack(HANDLE hThread, STACKFRAME64 stack[], unsigned int maxSta
             
             STACKFRAME64 stackFrame;
             ZeroMemory(&stackFrame, sizeof(stackFrame));
-
-            stackFrame.AddrPC.Offset    = context.Eip;
+#if DECODA_X64
+            stackFrame.AddrPC.Offset = context.Rip;
+            stackFrame.AddrStack.Offset = context.Rsp;
+            stackFrame.AddrFrame.Offset = context.Rbp;
+#else
+            stackFrame.AddrPC.Offset = context.Eip;
             stackFrame.AddrStack.Offset = context.Esp;
             stackFrame.AddrFrame.Offset = context.Ebp;
+#endif
             stackFrame.AddrPC.Mode      = AddrModeFlat;
             stackFrame.AddrStack.Mode   = AddrModeFlat;
             stackFrame.AddrFrame.Mode   = AddrModeFlat;

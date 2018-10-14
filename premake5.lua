@@ -1,8 +1,9 @@
 solution "Decoda"
+    platforms { "x86", "x64" }
     configurations { "Debug", "Release" }
     location "build"
     symbols "On"
-    objdir "build/obj/%{prj.name}/%{cfg.buildcfg}"
+    objdir "build/obj/%{prj.name}/%{cfg.buildcfg}%{cfg.platform}"
     targetdir "bin/%{cfg.buildcfg}"
 	--debugdir "working"
     characterset "MBCS" 
@@ -23,8 +24,18 @@ solution "Decoda"
         defines { "DEBUG" }
         symbols "On"
 
+    filter "platforms:x64"
+        architecture "x86_64"
+        vectorextensions "SSE2"
+        defines { "DECODA_X64=1" }
+        
+    filter "platforms:x86"
+        defines { "DECODA_X64=0" }
+    filter{}
+    
 project "Frontend"
     kind "WindowedApp"
+    platforms { "x86" }
 	targetname "Decoda"
 	entrypoint "WinMainCRTStartup"
     location "build"
@@ -45,13 +56,14 @@ project "Frontend"
 		"libs/wxWidgets/lib/vc_lib",
 		"libs/wxScintilla/lib",
 		"libs/Update/lib",
+        "%{cfg.targetdir}"
 	}
     links {
 		"comctl32",
 		"rpcrt4",
 		"imagehlp",
 		"Update",
-		"Shared",
+		"Shared%{cfg.platform}",
         "tinyxml"
 	}
 
@@ -91,9 +103,12 @@ project "Frontend"
 		
 project "LuaInject"
     kind "SharedLib"
+    targetname "LuaInject%{cfg.platform}"
+    platforms { "x86", "x64" }
     location "build"
     language "C++"
 	defines { "TIXML_USE_STL" }
+    linkoptions { "/export:DetourFinishHelperProcess,@1,NONAME" }
     files {
 		"src/LuaInject/*.h",
 		"src/LuaInject/*.cpp",
@@ -108,21 +123,28 @@ project "LuaInject"
 	libdirs {
 		"libs/dbghlp/lib",
         "libs/Detours/lib",
+        "%{cfg.targetdir}"
 	}
     links {
 		"Shared",
 		"psapi",
-        "detours.lib",
+        "detours%{cfg.platform}",
 	}
 
     configuration "Debug"
-		links { "tinyxmld" }
+		links { "tinyxmld%{cfg.platform}" }
 
     configuration "Release"		
-		links { "tinyxml" }
-		
+		links { "tinyxml%{cfg.platform}" }
+
+    filter "platforms:x86"
+		targetname "LuaInject32"
+    filter "platforms:x64"
+		targetname "LuaInject64"
 project "Shared"
     kind "StaticLib"
+    platforms { "x86", "x64" }
+    targetname "Shared%{cfg.platform}"
     location "build"
     language "C++"
     files {
@@ -139,6 +161,7 @@ project "Shared"
 
 project "tinyxml"
     kind "StaticLib"
+    platforms { "x86", "x64" }
     location "build"
     language "C++"
     defines {"_LIB", "TIXML_USE_STL" }
@@ -151,9 +174,7 @@ project "tinyxml"
     includedirs {
 	}
     configuration "Debug"
-        targetname "tinyxmld"
-        targetdir "bin/debug"
+        targetname "tinyxmld%{cfg.platform}"
 
     configuration "Release"
-        targetname "tinyxml"
-        targetdir "bin/release"
+        targetname "tinyxml%{cfg.platform}"
