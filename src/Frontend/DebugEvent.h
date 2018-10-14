@@ -26,6 +26,8 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include <wx/event.h>
 #include "Protocol.h"
 
+typedef unsigned long long VMHandle;
+
 //
 // Event definitions.
 //
@@ -44,7 +46,7 @@ public:
     /**
      * Constructor.
      */
-    wxDebugEvent(EventId eventId, unsigned int vm);
+    wxDebugEvent(EventId eventId, VMHandle vm);
 
     /** 
      * Returns the event id of the event.
@@ -54,7 +56,7 @@ public:
     /**
      * Returns the id of the virtual machine the event came from.
      */
-    unsigned int GetVm() const;
+    unsigned long long GetVm() const;
 
     /**
      * Returns the index of the script the event relates to.
@@ -119,7 +121,7 @@ public:
 private:
 
     EventId         m_eventId;
-    unsigned int    m_vm;
+    VMHandle        m_vm;
 
     unsigned int    m_scriptIndex;
     unsigned int    m_line;

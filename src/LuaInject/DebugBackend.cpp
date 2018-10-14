@@ -32,6 +32,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include <assert.h>
 #include <algorithm>
 #include <sstream>
+#include <stdint.h>
 
 DebugBackend* DebugBackend::s_instance = NULL;
 
@@ -345,7 +346,7 @@ DebugBackend::VirtualMachine* DebugBackend::AttachState(int api, lua_State* L)
     }
 
     m_eventChannel.WriteUInt32(EventId_CreateVM);
-    m_eventChannel.WriteUInt32(reinterpret_cast<int>(L));
+    m_eventChannel.WriteUInt64(reinterpret_cast<unsigned long long>(L));
     m_eventChannel.Flush();
 
     // Register the debug API.
@@ -402,7 +403,7 @@ void DebugBackend::DetachState(int api, lua_State* L)
     {
 
         m_eventChannel.WriteUInt32(EventId_DestroyVM);
-        m_eventChannel.WriteUInt32(reinterpret_cast<int>(L));
+        m_eventChannel.WriteUInt64(reinterpret_cast<unsigned long long>(L));
         m_eventChannel.Flush();
 
         m_stateToVm.erase(stateIterator);
@@ -456,7 +457,7 @@ int DebugBackend::PostLoadScript(int api, int result, lua_State* L, const char* 
 
             // Send an error event.
             m_eventChannel.WriteUInt32(EventId_LoadError);
-            m_eventChannel.WriteUInt32(reinterpret_cast<int>(L));
+            m_eventChannel.WriteUInt64(reinterpret_cast<unsigned long long>(L));
             m_eventChannel.WriteString(message);
             m_eventChannel.Flush();
         
@@ -627,7 +628,7 @@ int DebugBackend::RegisterScript(lua_State* L, const char* source, size_t size, 
     }
 
     m_eventChannel.WriteUInt32(EventId_LoadScript);
-    m_eventChannel.WriteUInt32(reinterpret_cast<int>(L));
+    m_eventChannel.WriteUInt64(reinterpret_cast<unsigned long long>(L));
     m_eventChannel.WriteString(fileName);
     m_eventChannel.WriteString(script->source);
 
@@ -766,7 +767,7 @@ void DebugBackend::HookCallback(int api, lua_State* L, lua_Debug* ar)
     {
         vm->name = name;
         m_eventChannel.WriteUInt32(EventId_NameVM);
-        m_eventChannel.WriteUInt32(reinterpret_cast<int>(L));
+        m_eventChannel.WriteUInt64(reinterpret_cast<unsigned long long>(L));
         m_eventChannel.WriteString(vm->name);
     }
 
@@ -1085,8 +1086,8 @@ void DebugBackend::CommandThreadProc()
         else
         {
 
-            unsigned int vm;
-            m_commandChannel.ReadUInt32(vm);
+            unsigned long long vm;
+            m_commandChannel.ReadUInt64(vm);
 
             lua_State* L = reinterpret_cast<lua_State*>(vm);
 
@@ -1297,7 +1298,7 @@ void DebugBackend::ToggleBreakpoint(lua_State* L, unsigned int scriptIndex, unsi
 
         // Send back the event telling the frontend that we set/unset the breakpoint.
         m_eventChannel.WriteUInt32(EventId_SetBreakpoint);    
-        m_eventChannel.WriteUInt32(reinterpret_cast<int>(L));  
+        m_eventChannel.WriteUInt64(reinterpret_cast<unsigned long long>(L));  
         m_eventChannel.WriteUInt32(scriptIndex);
         m_eventChannel.WriteUInt32(line);
         m_eventChannel.WriteUInt32(breakpointSet);
@@ -1397,7 +1398,7 @@ void DebugBackend::SendBreakEvent(int api, lua_State* L, int stackTop)
     }
 
     m_eventChannel.WriteUInt32(EventId_Break);
-    m_eventChannel.WriteUInt32(reinterpret_cast<int>(L));
+    m_eventChannel.WriteUInt64(reinterpret_cast<unsigned long long>(L));
 
     // Send the call stack.
 
@@ -1431,7 +1432,7 @@ void DebugBackend::SendBreakEvent(int api, lua_State* L, int stackTop)
 void DebugBackend::SendExceptionEvent(lua_State* L, const char* message)
 {
     m_eventChannel.WriteUInt32(EventId_Exception);
-    m_eventChannel.WriteUInt32(reinterpret_cast<int>(L));
+    m_eventChannel.WriteUInt64(reinterpret_cast<unsigned long long>(L));
     m_eventChannel.WriteString(message);
     m_eventChannel.Flush();
 }

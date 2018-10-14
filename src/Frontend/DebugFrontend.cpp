@@ -502,8 +502,8 @@ void DebugFrontend::EventThreadProc()
     while (m_eventChannel.ReadUInt32(eventId))
     {
 
-        unsigned int vm;
-        m_eventChannel.ReadUInt32(vm);
+        VMHandle vm;
+        m_eventChannel.ReadUInt64(vm);
 
         wxDebugEvent event(static_cast<EventId>(eventId), vm);
 
@@ -669,45 +669,45 @@ DWORD WINAPI DebugFrontend::StaticEventThreadProc(LPVOID param)
 
 }
 
-void DebugFrontend::Continue(unsigned int vm)
+void DebugFrontend::Continue(VMHandle vm)
 {
     m_state = State_Running;
     m_commandChannel.WriteUInt32(CommandId_Continue);
-    m_commandChannel.WriteUInt32(vm);
+    m_commandChannel.WriteUInt64(vm);
     m_commandChannel.Flush();
 }
 
-void DebugFrontend::Break(unsigned int vm)
+void DebugFrontend::Break(VMHandle vm)
 {
     m_commandChannel.WriteUInt32(CommandId_Break);
-    m_commandChannel.WriteUInt32(vm);
+    m_commandChannel.WriteUInt64(vm);
     m_commandChannel.Flush();
 }
 
-void DebugFrontend::StepOver(unsigned int vm)
+void DebugFrontend::StepOver(VMHandle vm)
 {
     m_state = State_Running;
     m_commandChannel.WriteUInt32(CommandId_StepOver);
-    m_commandChannel.WriteUInt32(vm);
+    m_commandChannel.WriteUInt64(vm);
     m_commandChannel.Flush();
 }
 
-void DebugFrontend::StepInto(unsigned int vm)
+void DebugFrontend::StepInto(VMHandle vm)
 {
     m_state = State_Running;
     m_commandChannel.WriteUInt32(CommandId_StepInto);
-    m_commandChannel.WriteUInt32(vm);
+    m_commandChannel.WriteUInt64(vm);
     m_commandChannel.Flush();
 }
 
-void DebugFrontend::DoneLoadingScript(unsigned int vm)
+void DebugFrontend::DoneLoadingScript(VMHandle vm)
 {
     m_commandChannel.WriteUInt32(CommandId_LoadDone);
-    m_commandChannel.WriteUInt32(vm);
+    m_commandChannel.WriteUInt64(vm);
     m_commandChannel.Flush();
 }
 
-bool DebugFrontend::Evaluate(unsigned int vm, const char* expression, unsigned int stackLevel, std::string& result)
+bool DebugFrontend::Evaluate(VMHandle vm, const char* expression, unsigned int stackLevel, std::string& result)
 {
 
     if (vm == 0)
@@ -716,7 +716,7 @@ bool DebugFrontend::Evaluate(unsigned int vm, const char* expression, unsigned i
     }
 
     m_commandChannel.WriteUInt32(CommandId_Evaluate);
-    m_commandChannel.WriteUInt32(vm);
+    m_commandChannel.WriteUInt64(vm);
     m_commandChannel.WriteString(expression);
     m_commandChannel.WriteUInt32(stackLevel);
     m_commandChannel.Flush();
@@ -729,18 +729,18 @@ bool DebugFrontend::Evaluate(unsigned int vm, const char* expression, unsigned i
 
 }
 
-void DebugFrontend::ToggleBreakpoint(unsigned int vm, unsigned int scriptIndex, unsigned int line)
+void DebugFrontend::ToggleBreakpoint(VMHandle vm, unsigned int scriptIndex, unsigned int line)
 {
 
     m_commandChannel.WriteUInt32(CommandId_ToggleBreakpoint);
-    m_commandChannel.WriteUInt32(vm);
+    m_commandChannel.WriteUInt64(vm);
     m_commandChannel.WriteUInt32(scriptIndex);
     m_commandChannel.WriteUInt32(line);
     m_commandChannel.Flush();
 
 }
 
-void DebugFrontend::RemoveAllBreakPoints(unsigned int vm)
+void DebugFrontend::RemoveAllBreakPoints(VMHandle vm)
 {
 
     m_commandChannel.WriteUInt32(CommandId_DeleteAllBreakpoints);

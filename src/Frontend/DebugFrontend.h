@@ -34,6 +34,8 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include "CriticalSection.h"
 #include "LineMapper.h"
 
+typedef unsigned long long VMHandle;
+
 /**
  * Frontend for the debugger.
  */
@@ -117,47 +119,47 @@ public:
     /**
      * Instructs the debugger to continue until it hits the next breakpoint.
      */
-    void Continue(unsigned int vm);
+    void Continue(VMHandle vm);
 
     /**
      * Instructs the debugger to break on the next line of script code it
      * executes. Since the process being deugged may not currently be executing
      * script code, this may not happen immediately.
      */
-    void Break(unsigned int vm);
+    void Break(VMHandle vm);
 
     /**
      * Instructs the debugger to step to the next line. If the current line
      * is a function this will step over the function.
      */
-    void StepOver(unsigned int vm);
+    void StepOver(VMHandle vm);
 
     /**
      * Instructs the debugger to step to the next line. If the current line
      * is a function this will step into the function.
      */
-    void StepInto(unsigned int vm);
+    void StepInto(VMHandle vm);
 
     /**
      * Signals to the debugger that we've finished the processing we needed to
      * do in response to a load script event.
      */
-    void DoneLoadingScript(unsigned int vm);
+    void DoneLoadingScript(VMHandle vm);
 
     /**
      * Evaluates the expression in the current context.
      */
-    bool Evaluate(unsigned int vm, const char* expression, unsigned int stackLevel, std::string& result);
+    bool Evaluate(VMHandle vm, const char* expression, unsigned int stackLevel, std::string& result);
 
     /**
      * Toggles a breakpoint on the specified line.
      */
-    void ToggleBreakpoint(unsigned int vm, unsigned int scriptIndex, unsigned int line);
+    void ToggleBreakpoint(VMHandle vm, unsigned int scriptIndex, unsigned int line);
     
     /**
      * Removes all breakpoints set this will also disable the line hook if the debug mode is set to continue
      */
-    void RemoveAllBreakPoints(unsigned int vm);
+    void RemoveAllBreakPoints(VMHandle vm);
 
     /**
      * Returns the specified script.
