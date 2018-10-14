@@ -200,21 +200,21 @@ DebugBackend::~DebugBackend()
 
 }
 
-void DebugBackend::CreateApi(unsigned long apiIndex)
+void DebugBackend::CreateApi(int api)
 {
 
     // Make room for the data for this api.
-    if (m_apis.size() < apiIndex + 1)
+    if (m_apis.size() < api + 1)
     {
-        m_apis.resize(apiIndex + 1);
+        m_apis.resize(api + 1);
     }
 
-    assert(m_apis[apiIndex].IndexChained    == NULL);
-    assert(m_apis[apiIndex].NewIndexChained == NULL);
+    assert(m_apis[api].IndexChained    == NULL);
+    assert(m_apis[api].NewIndexChained == NULL);
 
     // Create instances of the functions will need to use as callbacks with this API.
-    m_apis[apiIndex].IndexChained    = CreateCFunction(apiIndex, IndexChained);
-    m_apis[apiIndex].NewIndexChained = CreateCFunction(apiIndex, NewIndexChained);
+    m_apis[api].IndexChained    = CreateCFunction(api, IndexChained);
+    m_apis[api].NewIndexChained = CreateCFunction(api, NewIndexChained);
 
 }
 
@@ -300,7 +300,7 @@ bool DebugBackend::Initialize(HINSTANCE hInstance)
 
 }
 
-DebugBackend::VirtualMachine* DebugBackend::AttachState(unsigned long api, lua_State* L)
+DebugBackend::VirtualMachine* DebugBackend::AttachState(int api, lua_State* L)
 {
 
     if (!GetIsAttached())
@@ -361,16 +361,9 @@ DebugBackend::VirtualMachine* DebugBackend::AttachState(unsigned long api, lua_S
     {
 
         lua_pushlightuserdata_dll(api, L, L);
-        
-        if (GetIsStdCall(api))
-        {
-            lua_pushcclosure_dll(api, L, (lua_CFunction)ThreadEndCallback_stdcall, 1);
-        }
-        else
-        {
-            lua_pushcclosure_dll(api, L, ThreadEndCallback, 1);
-        }
-        
+
+        lua_pushcclosure_dll(api, L, ThreadEndCallback, 1);
+
         SetGarbageCollectionCallback(api, L, -2);
         lua_pop_dll(api, L, 1);
     
@@ -380,7 +373,7 @@ DebugBackend::VirtualMachine* DebugBackend::AttachState(unsigned long api, lua_S
 
 }
 
-void DebugBackend::DetachState(unsigned long api, lua_State* L)
+void DebugBackend::DetachState(int api, lua_State* L)
 {
 
     CriticalSectionLock lock1(m_criticalSection);
@@ -429,7 +422,7 @@ void DebugBackend::DetachState(unsigned long api, lua_State* L)
 
 }
 
-int DebugBackend::PostLoadScript(unsigned long api, int result, lua_State* L, const char* source, size_t size, const char* name)
+int DebugBackend::PostLoadScript(int api, int result, lua_State* L, const char* source, size_t size, const char* name)
 {
 
     if (!GetIsAttached())
@@ -651,7 +644,7 @@ int DebugBackend::RegisterScript(lua_State* L, const char* source, size_t size, 
 
 }
 
-int DebugBackend::RegisterScript(unsigned long api, lua_State* L, lua_Debug* ar)
+int DebugBackend::RegisterScript(int api, lua_State* L, lua_Debug* ar)
 {
     const char* arsource = GetSource( api, ar);
     const char* source = NULL;
@@ -693,7 +686,7 @@ void DebugBackend::Message(const char* message, MessageType type)
     m_eventChannel.Flush();
 }
 
-void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
+void DebugBackend::HookCallback(int api, lua_State* L, lua_Debug* ar)
 {
 
     m_criticalSection.Enter(); 
@@ -898,7 +891,7 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
 
 }
 
-void DebugBackend::UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* hookEvent)
+void DebugBackend::UpdateHookMode(int api, lua_State* L, lua_Debug* hookEvent)
 {
     int arevent = GetEvent(api, hookEvent);
     //Only update the hook mode for call or return hook events 
@@ -969,7 +962,7 @@ void DebugBackend::UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* ho
     }
 }
 
-bool DebugBackend::StackHasBreakpoint(unsigned long api, lua_State* L)
+bool DebugBackend::StackHasBreakpoint(int api, lua_State* L)
 {
     
     lua_Debug functionInfo;
@@ -1136,7 +1129,7 @@ void DebugBackend::CommandThreadProc()
                     unsigned int stackLevel;
                     m_commandChannel.ReadUInt32(stackLevel);
 
-                    unsigned long api = GetApiForVm(L);
+                    int api = GetApiForVm(L);
 
                     std::string result;
                     bool success = false;
@@ -1361,7 +1354,7 @@ void DebugBackend::DeleteAllBreakpoints(){
     SetHaveActiveBreakpoints(false);
 }
 
-void DebugBackend::SendBreakEvent(unsigned long api, lua_State* L, int stackTop)
+void DebugBackend::SendBreakEvent(int api, lua_State* L, int stackTop)
 {
 
     CriticalSectionLock lock(m_criticalSection);
@@ -1443,7 +1436,7 @@ void DebugBackend::SendExceptionEvent(lua_State* L, const char* message)
     m_eventChannel.Flush();
 }
 
-void DebugBackend::BreakFromScript(unsigned long api, lua_State* L)
+void DebugBackend::BreakFromScript(int api, lua_State* L)
 {
     CriticalSectionLock lock(m_breakLock);
 
@@ -1451,7 +1444,7 @@ void DebugBackend::BreakFromScript(unsigned long api, lua_State* L)
     WaitForContinue();        
 }
 
-int DebugBackend::Call(unsigned long api, lua_State* L, int nargs, int nresults, int errorfunc)
+int DebugBackend::Call(int api, lua_State* L, int nargs, int nresults, int errorfunc)
 {
 
     // Check it's not our error handler that's getting called (happens when there's an
@@ -1506,11 +1499,11 @@ int DebugBackend::Call(unsigned long api, lua_State* L, int nargs, int nresults,
 
 int DebugBackend::StaticErrorHandler(lua_State* L)
 {
-    unsigned long api = s_instance->GetApiForVm(L);
+    int api = s_instance->GetApiForVm(L);
     return s_instance->ErrorHandler(api, L);
 }
 
-int DebugBackend::ErrorHandler(unsigned long api, lua_State* L)
+int DebugBackend::ErrorHandler(int api, lua_State* L)
 {
 
     int top = lua_gettop_dll(api, L);
@@ -1596,7 +1589,7 @@ bool DebugBackend::GetStartupDirectory(char* path, int maxPathLength)
 
 }
 
-void DebugBackend::ChainTables(unsigned long api, lua_State* L, int child, int parent)
+void DebugBackend::ChainTables(int api, lua_State* L, int child, int parent)
 {
     
     int t1 = lua_gettop_dll(api, L);
@@ -1623,7 +1616,7 @@ void DebugBackend::ChainTables(unsigned long api, lua_State* L, int child, int p
 
 }
 
-bool DebugBackend::CreateEnvironment(unsigned long api, lua_State* L, int stackLevel, int nilSentinel)
+bool DebugBackend::CreateEnvironment(int api, lua_State* L, int stackLevel, int nilSentinel)
 {
 
     int t1 = lua_gettop_dll(api, L);
@@ -1722,7 +1715,7 @@ bool DebugBackend::CreateEnvironment(unsigned long api, lua_State* L, int stackL
 
 }
 
-int DebugBackend::IndexChained(unsigned long api, lua_State* L)
+int DebugBackend::IndexChained(int api, lua_State* L)
 {
 
     LUA_CHECK_STACK(api, L, 1)
@@ -1767,7 +1760,7 @@ int DebugBackend::IndexChained(unsigned long api, lua_State* L)
 
 }
 
-int DebugBackend::NewIndexChained(unsigned long api, lua_State* L)
+int DebugBackend::NewIndexChained(int api, lua_State* L)
 {
 
     LUA_CHECK_STACK(api, L, 0)
@@ -1824,7 +1817,7 @@ int DebugBackend::NewIndexChained(unsigned long api, lua_State* L)
 
 }
 
-void DebugBackend::CreateChainedTable(unsigned long api, lua_State* L, int nilSentinel, int localTable, int upValueTable, int globalTable)
+void DebugBackend::CreateChainedTable(int api, lua_State* L, int nilSentinel, int localTable, int upValueTable, int globalTable)
 {
 
     lua_newtable_dll(api, L);
@@ -1862,7 +1855,7 @@ void DebugBackend::CreateChainedTable(unsigned long api, lua_State* L, int nilSe
 
 }
 
-void DebugBackend::SetLocals(unsigned long api, lua_State* L, int stackLevel, int localTable, int nilSentinel)
+void DebugBackend::SetLocals(int api, lua_State* L, int stackLevel, int localTable, int nilSentinel)
 {
 
     lua_Debug stackEntry;
@@ -1901,7 +1894,7 @@ void DebugBackend::SetLocals(unsigned long api, lua_State* L, int stackLevel, in
 
 }
 
-void DebugBackend::SetUpValues(unsigned long api, lua_State* L, int stackLevel, int upValueTable, int nilSentinel)
+void DebugBackend::SetUpValues(int api, lua_State* L, int stackLevel, int upValueTable, int nilSentinel)
 {
 
     lua_Debug stackEntry;
@@ -1947,7 +1940,7 @@ void DebugBackend::SetUpValues(unsigned long api, lua_State* L, int stackLevel, 
 
 }
 
-bool DebugBackend::Evaluate(unsigned long api, lua_State* L, const std::string& expression, int stackLevel, std::string& result)
+bool DebugBackend::Evaluate(int api, lua_State* L, const std::string& expression, int stackLevel, std::string& result)
 {
 
     if (!GetIsLuaLoaded())
@@ -2120,7 +2113,7 @@ bool DebugBackend::Evaluate(unsigned long api, lua_State* L, const std::string& 
 
 }
 
-bool DebugBackend::CallMetaMethod(unsigned long api, lua_State* L, int valueIndex, const char* method, int numResults, int& result) const
+bool DebugBackend::CallMetaMethod(int api, lua_State* L, int valueIndex, const char* method, int numResults, int& result) const
 {
 
     if (!lua_checkstack_dll(api, L, 3))
@@ -2163,7 +2156,7 @@ bool DebugBackend::CallMetaMethod(unsigned long api, lua_State* L, int valueInde
 
 }
 
-void DebugBackend::MergeTables(unsigned long api, lua_State* L, unsigned int tableIndex1, unsigned int tableIndex2) const
+void DebugBackend::MergeTables(int api, lua_State* L, unsigned int tableIndex1, unsigned int tableIndex2) const
 {
     
     if (!lua_checkstack_dll(api, L, 3))
@@ -2203,7 +2196,7 @@ void DebugBackend::MergeTables(unsigned long api, lua_State* L, unsigned int tab
 
 }
 
-TiXmlNode* DebugBackend::GetLuaBindClassValue(unsigned long api, lua_State* L, unsigned int maxDepth, bool displayAsKey) const
+TiXmlNode* DebugBackend::GetLuaBindClassValue(int api, lua_State* L, unsigned int maxDepth, bool displayAsKey) const
 {
 
     if (!lua_checkstack_dll(api, L, 3))
@@ -2265,7 +2258,7 @@ TiXmlNode* DebugBackend::GetLuaBindClassValue(unsigned long api, lua_State* L, u
 
 }
 
-TiXmlNode* DebugBackend::GetValueAsText(unsigned long api, lua_State* L, int n, int maxDepth, const char* typeNameOverride, bool displayAsKey) const
+TiXmlNode* DebugBackend::GetValueAsText(int api, lua_State* L, int n, int maxDepth, const char* typeNameOverride, bool displayAsKey) const
 {
 
     int t1 = lua_gettop_dll(api, L);
@@ -2594,7 +2587,7 @@ TiXmlNode* DebugBackend::GetValueAsText(unsigned long api, lua_State* L, int n, 
 
 }
 
-TiXmlNode* DebugBackend::GetTableAsText(unsigned long api, lua_State* L, int t, int maxDepth, const char* typeNameOverride) const
+TiXmlNode* DebugBackend::GetTableAsText(int api, lua_State* L, int t, int maxDepth, const char* typeNameOverride) const
 {
 
     if (!lua_checkstack_dll(api, L, 2))
@@ -2656,7 +2649,7 @@ bool DebugBackend::GetIsInternalVariable(const char* name) const
     return name[0] == '(';
 }
 
-bool DebugBackend::GetClassNameForMetatable(unsigned long api, lua_State* L, int mt) const
+bool DebugBackend::GetClassNameForMetatable(int api, lua_State* L, int mt) const
 {
     
     if (!lua_checkstack_dll(api, L, 2))
@@ -2714,7 +2707,7 @@ bool DebugBackend::GetClassNameForMetatable(unsigned long api, lua_State* L, int
 
 }
 
-const char* DebugBackend::GetClassNameForUserdata(unsigned long api, lua_State* L, int ud) const
+const char* DebugBackend::GetClassNameForUserdata(int api, lua_State* L, int ud) const
 {
 
     if (!lua_checkstack_dll(api, L, 2))
@@ -2756,7 +2749,7 @@ const char* DebugBackend::GetClassNameForUserdata(unsigned long api, lua_State* 
 
 }
 
-void DebugBackend::RegisterClassName(unsigned long api, lua_State* L, const char* name, int metaTable)
+void DebugBackend::RegisterClassName(int api, lua_State* L, const char* name, int metaTable)
 {
 
     CriticalSectionLock lock(m_criticalSection);
@@ -2773,12 +2766,12 @@ void DebugBackend::RegisterClassName(unsigned long api, lua_State* L, const char
 
 }
 
-int DebugBackend::LoadScriptWithoutIntercept(unsigned long api, lua_State* L, const char* buffer, size_t size, const char* name)
+int DebugBackend::LoadScriptWithoutIntercept(int api, lua_State* L, const char* buffer, size_t size, const char* name)
 {
     return lua_loadbuffer_dll(api, L, buffer, size, name, NULL);
 }
 
-int DebugBackend::LoadScriptWithoutIntercept(unsigned long api, lua_State* L, const std::string& string)
+int DebugBackend::LoadScriptWithoutIntercept(int api, lua_State* L, const std::string& string)
 {
     return LoadScriptWithoutIntercept(api, L, string.c_str(), string.length(), string.c_str());
 }
@@ -2881,7 +2874,7 @@ std::string DebugBackend::GetAsciiString(const void* buffer, size_t length, bool
 
 }
 
-void DebugBackend::CreateWeakTable(unsigned long api, lua_State* L, const char* type)
+void DebugBackend::CreateWeakTable(int api, lua_State* L, const char* type)
 {
 
     lua_newtable_dll(api, L);
@@ -2906,7 +2899,7 @@ int DebugBackend::ObjectCollectionCallback(lua_State* L)
         return 0;
     }
 
-    unsigned long api = DebugBackend::Get().GetApiForVm(L);
+    int api = DebugBackend::Get().GetApiForVm(L);
 
     int tableIndex    = lua_upvalueindex_dll(api, 1);
     int callbackIndex = lua_upvalueindex_dll(api, 2);
@@ -2928,15 +2921,8 @@ int DebugBackend::ObjectCollectionCallback(lua_State* L)
             
         lua_pushvalue_dll(api, L, tableIndex);
         lua_pushvalue_dll(api, L, callbackIndex);
+        lua_pushcclosure_dll(api, L, ObjectCollectionCallback, 2);
 
-        if (GetIsStdCall(api))
-        {
-            lua_pushcclosure_dll(api, L, (lua_CFunction)(ObjectCollectionCallback_stdcall), 2);
-        }
-        else
-        {
-            lua_pushcclosure_dll(api, L, ObjectCollectionCallback, 2);
-        }
 
         DebugBackend::Get().CreateGarbageCollectionSentinel(api, L);
 
@@ -2953,7 +2939,7 @@ int __stdcall DebugBackend::ObjectCollectionCallback_stdcall(lua_State* L)
     return ObjectCollectionCallback(L);
 }
 
-void DebugBackend::CreateGarbageCollectionSentinel(unsigned long api, lua_State* L)
+void DebugBackend::CreateGarbageCollectionSentinel(int api, lua_State* L)
 {
 
     int t1 = lua_gettop_dll(api, L);
@@ -2982,7 +2968,7 @@ void DebugBackend::CreateGarbageCollectionSentinel(unsigned long api, lua_State*
 
 }
 
-void DebugBackend::SetGarbageCollectionCallback(unsigned long api, lua_State* L, int index)
+void DebugBackend::SetGarbageCollectionCallback(int api, lua_State* L, int index)
 {
 
     int t1 = lua_gettop_dll(api, L);
@@ -3002,14 +2988,7 @@ void DebugBackend::SetGarbageCollectionCallback(unsigned long api, lua_State* L,
 
     lua_pushvalue_dll(api, L, callbackIndex);
 
-    if (GetIsStdCall(api))
-    {
-        lua_pushcclosure_dll(api, L, (lua_CFunction)(ObjectCollectionCallback_stdcall), 2);
-    }
-    else
-    {
-        lua_pushcclosure_dll(api, L, ObjectCollectionCallback, 2);
-    }
+    lua_pushcclosure_dll(api, L, ObjectCollectionCallback, 2);
         
     CreateGarbageCollectionSentinel(api, L);
 
@@ -3024,7 +3003,7 @@ void DebugBackend::SetGarbageCollectionCallback(unsigned long api, lua_State* L,
 int DebugBackend::ThreadEndCallback(lua_State* L)
 {
 
-    unsigned long api = DebugBackend::Get().GetApiForVm(L);
+    int api = DebugBackend::Get().GetApiForVm(L);
     lua_State* thread = static_cast<lua_State*>(lua_touserdata_dll(api, L, lua_upvalueindex_dll(api, 1)));
 
     if (thread != L)
@@ -3063,7 +3042,7 @@ void DebugBackend::GetFileTitle(const char* name, std::string& title) const
 
 }
 
-bool DebugBackend::EnableJit(unsigned long api, lua_State* L, bool enable)
+bool DebugBackend::EnableJit(int api, lua_State* L, bool enable)
 {
 
     LUA_CHECK_STACK(api, L, 0);
@@ -3108,7 +3087,7 @@ bool DebugBackend::EnableJit(unsigned long api, lua_State* L, bool enable)
 
 }
 
-void DebugBackend::LogHookEvent(unsigned long api, lua_State* L, lua_Debug* ar)
+void DebugBackend::LogHookEvent(int api, lua_State* L, lua_Debug* ar)
 {
 
     const char* eventType = GetHookEventName( api, ar);
@@ -3171,7 +3150,7 @@ unsigned int DebugBackend::GetCStack(HANDLE hThread, StackEntry stack[], unsigne
 
 }
 
-int DebugBackend::GetStackDepth(unsigned long api, lua_State* L) const
+int DebugBackend::GetStackDepth(int api, lua_State* L) const
 {
 
     lua_Debug ar;
@@ -3202,7 +3181,7 @@ DebugBackend::VirtualMachine* DebugBackend::GetVm(lua_State* L)
 
 }
 
-unsigned int DebugBackend::GetUnifiedStack(unsigned long api, const StackEntry nativeStack[], unsigned int nativeStackSize, const lua_Debug scriptStack[], unsigned int scriptStackSize, StackEntry stack[])
+unsigned int DebugBackend::GetUnifiedStack(int api, const StackEntry nativeStack[], unsigned int nativeStackSize, const lua_Debug scriptStack[], unsigned int scriptStackSize, StackEntry stack[])
 {
 
     // Print out the unified call stack.
