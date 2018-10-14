@@ -95,6 +95,7 @@ int             lua_setfenv_dll         (unsigned long api, lua_State *L, int in
 void *          lua_newuserdata_dll     (unsigned long api, lua_State *L, size_t size);
 int             lua_checkstack_dll      (unsigned long api, lua_State *L, int extra);
 
+
 /**
  * Similar to lua_pushthread, but will be emulated under Lua 5.0. The return
  * value is true if the function was successful, or false if otherwise. Note

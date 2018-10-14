@@ -22,6 +22,8 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "StdCall.h"
 
+#ifndef DECODA_X64
+
 #pragma runtime_checks( "s", off )
 bool GetIsStdCallConvention(void* function, void* arg1, void** result)
 {
@@ -289,3 +291,8 @@ bool GetIsStdCallConvention(void* function, void* arg1, void* arg2, void* arg3, 
 }
 
 #pragma runtime_checks( "s", restore )
+
+#else
+
+
+#endif
