@@ -24,6 +24,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "LuaDll.h"
 #include "DebugBackend.h"
+#include "detours.h"
 
 HINSTANCE g_hInstance = NULL;
 
@@ -32,9 +33,13 @@ BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD reason, LPVOID reserved)
 
     g_hInstance = hInstance;
 
+    if (DetourIsHelperProcess()) {
+        return TRUE;
+    }
+
     if (reason == DLL_PROCESS_ATTACH)
     {
-
+        DetourRestoreAfterWith();
         // This line can be uncommented to give yourself an opportunity to attach
         // the MSVC debugger to the process being debugged in Decoda to allow
         // LuaInject to be debugged.
