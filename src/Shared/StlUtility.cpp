@@ -25,14 +25,14 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 void ReplaceAll(std::string& string, const std::string& find, const std::string& sub)
 {
 
-    int pos = 0;
+    size_t pos = 0;
     
-    while (pos != -1)
+    while (pos != std::string::npos)
     {
 
         pos = string.find(find, pos);
 
-        if (pos != -1)
+        if (pos != std::string::npos)
         {
             string.replace(string.begin() + pos, string.begin() + pos + find.length(), sub);
             pos += sub.length();

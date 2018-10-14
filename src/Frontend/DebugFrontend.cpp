@@ -196,7 +196,7 @@ bool DebugFrontend::InitializeBackend(const char* symbolsDirectory)
 
     // Inject our debugger DLL into the process so that we can monitor from
     // inside the process's memory space.
-    if (!InjectDll(m_processId, "LuaInject.dll"))
+    if (!InjectDll(m_processId, "LuaInject32.dll"))
     {
         MessageEvent("Error: LuaInject.dll could not be loaded into the process", MessageType_Error);
         return false;
