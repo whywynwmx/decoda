@@ -2057,8 +2057,8 @@ bool LoadLuaFunctions(const std::unordered_map<std::string, DWORD64>& symbols, H
     #define HOOK_FUNCTION(function)                                                                                             \
         if (luaInterface.function##_dll)                                                                          \
         {                                                                                                                       \
-            void* original = luaInterface.function##_dll.cdeclptr;                                                                 \
-            luaInterface.function##_dll.SetFunction(HookFunction(original, function##_intercept, api));        \
+            void* original = luaInterface.function##_dll.GetFunction();                                                                 \
+            luaInterface.function##_dll.SetFunction(HookFunction_Detours(original, function##_intercept));        \
         }
 
   #define HOOK_FUNCTION_DETOURS(function)                                                                                             \
@@ -2739,7 +2739,7 @@ void HookLoadLibrary()
     {
         // LoadLibraryExW is called by the other LoadLibrary functions, so we
         // only need to hook it.
-        LoadLibraryExW_dll = (LoadLibraryExW_t) HookFunction( GetProcAddress(hModuleKernel, "LoadLibraryExW"), LoadLibraryExW_intercept);
+        LoadLibraryExW_dll = (LoadLibraryExW_t) HookFunction_Detours( GetProcAddress(hModuleKernel, "LoadLibraryExW"), LoadLibraryExW_intercept);
     }
 
     // These NTDLL functions are undocumented and don't exist in Windows 2000.
