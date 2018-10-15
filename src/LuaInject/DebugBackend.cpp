@@ -214,8 +214,11 @@ void DebugBackend::CreateApi(int api)
     assert(m_apis[api].NewIndexChained == NULL);
 
     // Create instances of the functions will need to use as callbacks with this API.
-    m_apis[api].IndexChained    = CreateCFunction(api, IndexChained);
-    m_apis[api].NewIndexChained = CreateCFunction(api, NewIndexChained);
+    //m_apis[api].IndexChained    = CreateCFunction(api, IndexChained);
+   // m_apis[api].NewIndexChained = CreateCFunction(api, NewIndexChained);
+
+    m_apis[api].IndexChained = [](lua_State *L) { return IndexChained(0, L); };
+    m_apis[api].NewIndexChained = [](lua_State *L) { return NewIndexChained(0, L); };
 
 }
 
