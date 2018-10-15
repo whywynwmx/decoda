@@ -452,17 +452,10 @@ int CPCallHandlerWorker(int api, lua_State* L)
 }
 #pragma auto_inline()
 
-NAKED int CPCallHandler(int api, lua_State* L)
+int CPCallHandler(lua_State* L)
 {
-
-    int result;
-    bool stdcall;
-        
-    INTERCEPT_PROLOG()
-    
-    result = CPCallHandlerWorker(api, L);
-
-    INTERCEPT_EPILOG(4)
+    int api = 0;
+    return CPCallHandlerWorker(api, L);
 
 }
 
@@ -487,17 +480,10 @@ void HookHandlerWorker(int api, lua_State* L, lua_Debug* ar)
 }
 #pragma auto_inline()
 
-NAKED void HookHandler(int api, lua_State* L, lua_Debug* ar)
+void HookHandler(lua_State* L, lua_Debug* ar)
 {
-
-    bool stdcall;
-
-    INTERCEPT_PROLOG()
-    
+    int api = 0;
     HookHandlerWorker(api, L, ar);
-
-    INTERCEPT_EPILOG_NO_RETURN(8)
-
 }
 
 void SetHookMode(int api, lua_State* L, HookMode mode)
@@ -2300,8 +2286,8 @@ bool LoadLuaFunctions(const std::unordered_map<std::string, DWORD64>& symbols, H
     // Setup our API.
 
     luaInterface.DecodaOutput  = (lua_CFunction)InstanceFunction(DecodaOutput, api);
-    luaInterface.CPCallHandler = (lua_CFunction)InstanceFunction(CPCallHandler, api);
-    luaInterface.HookHandler   = (lua_Hook)InstanceFunction(HookHandler, api);
+    luaInterface.CPCallHandler = CPCallHandler; //(lua_CFunction)InstanceFunction(CPCallHandler, api);
+    luaInterface.HookHandler = HookHandler;  // (lua_Hook)InstanceFunction(HookHandler, api);
 
     g_interfaces.push_back( luaInterface );
 
@@ -2866,19 +2852,9 @@ int CFunctionHandlerWorker(CFunctionArgs* args, lua_State* L)
 }
 #pragma auto_inline()
 
-NAKED int CFunctionHandler(CFunctionArgs* args, lua_State* L)
+int CFunctionHandler(CFunctionArgs* args, lua_State* L)
 {
-
-    int result;
-    bool stdcall;
-        
-    INTERCEPT_PROLOG()
-    
-    stdcall = false;
-    result = CFunctionHandlerWorker(args, L);
-
-    INTERCEPT_EPILOG(4)
-
+    return CFunctionHandlerWorker(args, L);
 }
 
 lua_CFunction CreateCFunction(int api, lua_CFunction_dll function)
