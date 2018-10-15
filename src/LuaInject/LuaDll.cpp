@@ -343,68 +343,6 @@ struct CPCallHandlerArgs
     void*                       data;
 };
 
-#if DECODA_X64
-#define INTERCEPT_PROLOG() stdcall = false;
-#define INTERCEPT_EPILOG(argsSize) return result;
-#define INTERCEPT_EPILOG_NO_RETURN(argsSize) 
-#define NAKED 
-#else
-
-#define NAKED __declspec(naked) 
-
-/**
- * This macro outputs the prolog code for a naked intercept function. It
- * should be the first code in the function.
- */
-#define INTERCEPT_PROLOG()                          \
-	__asm                                           \
-    {                                               \
-        __asm push    ebp                           \
-        __asm mov     ebp,            esp           \
-        __asm sub     esp,            __LOCAL_SIZE  \
-    }
-
-/**
- * This macro outputs the epilog code for a naked intercept function. It
- * should be the last code in the function. argsSize is the number of 
- * bytes for the arguments to the function (not including the the api parameter).
- * The return from the function should be stored in the "result" variable, and
- * the "stdcall" bool variable determines if the function was called using the
- * stdcall or cdecl calling convention.
- */
-#define INTERCEPT_EPILOG(argsSize)                  \
-    __asm                                           \
-    {                                               \
-        __asm mov     eax,            result        \
-        __asm cmp     stdcall,        0             \
-        __asm mov     esp,            ebp           \
-        __asm pop     ebp                           \
-        __asm jne     stdcall_ret                   \
-        __asm ret     4                             \
-    __asm stdcall_ret:                              \
-        __asm ret     (4 + argsSize)                \
-    }
-
-/**
- * This macro outputs the epilog code for a naked intercept function that doesn't
- * have a return value. It should be the last code in the function. argsSize is the
- * number of  bytes for the arguments to the function (not including the the api
- * parameter). The "stdcall" bool variable determines if the function was called using
- * the stdcall or cdecl calling convention.
- */
-#define INTERCEPT_EPILOG_NO_RETURN(argsSize)        \
-    __asm                                           \
-    {                                               \
-        __asm cmp     stdcall,        0             \
-        __asm mov     esp,            ebp           \
-        __asm pop     ebp                           \
-        __asm jne     stdcall_ret                   \
-        __asm ret     4                             \
-    __asm stdcall_ret:                              \
-        __asm ret     (4 + argsSize)                \
-    }
-
-#endif
 
 LoadLibraryExW_t                LoadLibraryExW_dll      = NULL;
 LdrLockLoaderLock_t             LdrLockLoaderLock_dll   = NULL;
@@ -495,18 +433,9 @@ int DecodaOutputWorker(int api, lua_State* L)
 }
 #pragma auto_inline()
 
-NAKED int DecodaOutput(int api, lua_State* L)
+int DecodaOutput(int api, lua_State* L)
 {
-
-    int result;
-    bool stdcall;
-
-    INTERCEPT_PROLOG()
-
-    result = DecodaOutputWorker(api, L);
-
-    INTERCEPT_EPILOG(4)
-
+    return DecodaOutputWorker(api, L);
 }
 
 #pragma auto_inline(off)
