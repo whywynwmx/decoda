@@ -125,8 +125,8 @@ typedef lua_State*      (*luaL_newstate_cdecl_t)        ();
 typedef int             (*lua_checkstack_cdecl_t)       (lua_State* L, int extra);
 
 typedef HMODULE         (WINAPI *LoadLibraryExW_t)              (LPCWSTR lpFileName, HANDLE hFile, DWORD dwFlags);
-typedef ULONG           (WINAPI *LdrLockLoaderLock_t)           (ULONG flags, PULONG disposition, PULONG cookie);
-typedef LONG            (WINAPI *LdrUnlockLoaderLock_t)         (ULONG flags, ULONG cookie);
+typedef ULONG           (WINAPI *LdrLockLoaderLock_t)           (ULONG flags, PULONG disposition, ULONG_PTR* cookie);
+typedef LONG            (WINAPI *LdrUnlockLoaderLock_t)         (ULONG flags, ULONG_PTR cookie);
 
 
 template<typename T> struct LuaAPIPtr;
@@ -1345,7 +1345,7 @@ HMODULE WINAPI LoadLibraryExW_intercept(LPCWSTR fileName, HANDLE hFile, DWORD dw
     // in the case where Dll initialization acquires the loader lock and calls LoadLibrary
     // while another thread is inside PostLoadLibrary.
 
-    ULONG cookie;
+    ULONG_PTR cookie;
 
     if (LdrLockLoaderLock_dll   != NULL &&
         LdrUnlockLoaderLock_dll != NULL)
@@ -2779,7 +2779,7 @@ bool InstallLuaHooker(HINSTANCE hInstance, const char* symbolsDirectory)
     HookLoadLibrary();
 
     // Avoid deadlock if a new DLL is loaded during this function.
-    ULONG cookie;
+    ULONG_PTR  cookie;
 
     if (LdrLockLoaderLock_dll   != NULL &&
         LdrUnlockLoaderLock_dll != NULL)
