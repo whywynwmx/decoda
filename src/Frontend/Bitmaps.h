@@ -28,6 +28,7 @@ inline wxImage _wxConvertMemoryToImage(const unsigned char* data, int length, wx
 
 inline wxBitmap _wxConvertMemoryToBitmap(const unsigned char* data, int length, wxBitmapType type = wxBITMAP_TYPE_ANY )
 {
+  wxLogNull nolog;
 	wxMemoryInputStream stream( data, length );
 	return wxBitmap( wxImage( stream, type, -1 ), -1 );
 }
