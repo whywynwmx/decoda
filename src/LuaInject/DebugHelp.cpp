@@ -74,7 +74,7 @@ bool LoadDebugHelp(HINSTANCE hInstance)
     GetModuleFileNameEx(hProcess, hInstance, moduleFileName, _MAX_PATH);
 
     // Replace the file name with the dbghelp.dll file name.
-    strcpy(strrchr(moduleFileName, '\\'), "\\dbghelp.dll");
+    strcpy(strrchr(moduleFileName, '\\'), DECODA_X64 ? "\\dbghelp_x64.dll" : "\\dbghelp_x86.dll");
     
     HMODULE hModule = LoadLibrary(moduleFileName);
 

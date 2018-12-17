@@ -24,8 +24,8 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #define DEBUG_HELP_H
 
 #include <windows.h>
-#include <dbgeng.h>
-#include <dbghelp.h>
+#include "dbgeng.h"
+#include "dbghelp.h"
 
 #include <vector>
 
