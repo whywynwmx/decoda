@@ -193,7 +193,7 @@ void WatchWindow::OnEndLabelEdit(wxTreeEvent& event)
         }
         else
         {
-            SetItemText(item, expression);
+            SetItemText(item, GetMainColumn(), expression);
             UpdateItem(item);
         }
 

@@ -3861,9 +3861,9 @@ void MainFrame::LoadOptions()
                 }
                 else if (ReadXmlNode(node, "layout", data))
                 {
+		 
+		    wxString mode = node->GetAttribute("mode");
 
-                    wxString mode = node->GetPropVal("mode", "");
-                    
                     for (unsigned int i = 0; i < Mode_NumModes; ++i)
                     {
                         if (mode.IsSameAs(s_modeName[i]))
@@ -3919,16 +3919,16 @@ void MainFrame::LoadExternalTool(wxXmlNode* node)
 {
 
     wxString title;
-    node->GetPropVal("title", &title);
+    node->GetAttribute("title", &title);
 
     wxString command;
-    node->GetPropVal("command", &command);
+    node->GetAttribute("command", &command);
 
     wxString arguments;
-    node->GetPropVal("arguments", &arguments);
+    node->GetAttribute("arguments", &arguments);
 
     wxString initialDirectory;
-    node->GetPropVal("initialdirectory", &initialDirectory);
+    node->GetAttribute("initialdirectory", &initialDirectory);
 
     ExternalTool* tool = new ExternalTool;
 
@@ -3998,7 +3998,7 @@ void MainFrame::SaveOptions()
     for (unsigned int i = 0; i < Mode_NumModes; ++i)
     {
         wxXmlNode* node = WriteXmlNode("layout", m_modeLayout[i]);
-        node->AddProperty("mode", s_modeName[i]);
+        node->AddAttribute("mode", s_modeName[i]);
         root->AddChild(node);
     }
 
@@ -4061,10 +4061,10 @@ wxXmlNode* MainFrame::SaveExternalTool(const ExternalTool* tool) const
 
     wxXmlNode* node = new wxXmlNode(wxXML_ELEMENT_NODE, "tool");
 
-    node->AddProperty("title", tool->GetTitle());
-    node->AddProperty("command", tool->GetCommand());
-    node->AddProperty("arguments", tool->GetArguments());
-    node->AddProperty("initialdirectory", tool->GetInitialDirectory());
+    node->AddAttribute("title", tool->GetTitle());
+    node->AddAttribute("command", tool->GetCommand());
+    node->AddAttribute("arguments", tool->GetArguments());
+    node->AddAttribute("initialdirectory", tool->GetInitialDirectory());
 
     return node;
 

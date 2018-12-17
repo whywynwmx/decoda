@@ -812,7 +812,7 @@ public:
     }
 
     // generic attribute from wxWidgets lib
-    wxTreeItemAttr      *m_attr;
+    wxItemAttr      *m_attr;
 
     // other attributes
     wxTreeItemData      *m_data;        // user-provided data
@@ -1013,45 +1013,45 @@ public:
 
     // get them - may be NULL (used to read attributes)
     // NOTE: fall back on default at row/item level is not defined for cell
-    wxTreeItemAttr *GetAttributes(int column) const
+    wxItemAttr *GetAttributes(int column) const
     {
         wxTreeListItemCellAttrHash::const_iterator entry = m_props_cell.find( column );
         if (entry == m_props_cell.end()) return GetAttributes();
         return entry->second->m_attr;
     }
-    wxTreeItemAttr *GetAttributes() const { return m_props_row.m_attr; }
+    wxItemAttr *GetAttributes() const { return m_props_row.m_attr; }
 
     // get them ensuring that the pointer is not NULL (used to write attributes)
-    wxTreeItemAttr& Attr(int column) {
+    wxItemAttr& Attr(int column) {
         wxTreeListItemCellAttrHash::const_iterator entry = m_props_cell.find( column );
         if (entry == m_props_cell.end()) {
             m_props_cell[column] = new wxTreeListItemCellAttr();
-            m_props_cell[column]->m_attr = new wxTreeItemAttr;
+            m_props_cell[column]->m_attr = new wxItemAttr;
             m_props_cell[column]->m_ownsAttr = 1;
             return *(m_props_cell[column]->m_attr);
         } else {
             return *(entry->second->m_attr);
         }
     }
-    wxTreeItemAttr& Attr()
+    wxItemAttr& Attr()
     {
         if ( !m_props_row.m_attr )
         {
-            m_props_row.m_attr = new wxTreeItemAttr;
+            m_props_row.m_attr = new wxItemAttr;
             m_props_row.m_ownsAttr = 1;
         }
         return *m_props_row.m_attr;
     }
 /* ----- unused -----
     // set them
-    void SetAttributes(wxTreeItemAttr *attr)
+    void SetAttributes(wxItemAttr *attr)
     {
         if ( m_props_row.m_ownsAttr ) delete m_props_row.m_attr;
         m_props_row.m_attr = attr;
         m_props_row.m_ownsAttr = 0;
     }
     // set them and delete when done
-    void AssignAttributes(wxTreeItemAttr *attr)
+    void AssignAttributes(wxItemAttr *attr)
     {
         SetAttributes(attr);
         m_props_row.m_ownsAttr = 1;
@@ -2179,7 +2179,7 @@ bool wxTreeListMainWindow::GetItemBold (const wxTreeItemId& item, int column) co
 wxColour wxTreeListMainWindow::GetItemTextColour (const wxTreeItemId& item) const {
     wxCHECK_MSG (item.IsOk(), wxNullColour, _T("invalid tree item"));
     wxTreeListItem *pItem = (wxTreeListItem*) item.m_pItem;
-    wxTreeItemAttr *attr = pItem->GetAttributes();
+    wxItemAttr *attr = pItem->GetAttributes();
     if (attr && attr->HasTextColour()) {
         return attr->GetTextColour();
     } else {
@@ -2189,7 +2189,7 @@ wxColour wxTreeListMainWindow::GetItemTextColour (const wxTreeItemId& item) cons
 wxColour wxTreeListMainWindow::GetItemTextColour (const wxTreeItemId& item, int column) const {
     wxCHECK_MSG (item.IsOk(), wxNullColour, _T("invalid tree item"));
     wxTreeListItem *pItem = (wxTreeListItem*) item.m_pItem;
-    wxTreeItemAttr *attr = pItem->GetAttributes(column);
+    wxItemAttr *attr = pItem->GetAttributes(column);
     if (attr && attr->HasTextColour()) {
         return attr->GetTextColour();
     } else {
@@ -2200,7 +2200,7 @@ wxColour wxTreeListMainWindow::GetItemTextColour (const wxTreeItemId& item, int 
 wxColour wxTreeListMainWindow::GetItemBackgroundColour (const wxTreeItemId& item) const {
     wxCHECK_MSG (item.IsOk(), wxNullColour, _T("invalid tree item"));
     wxTreeListItem *pItem = (wxTreeListItem*) item.m_pItem;
-    wxTreeItemAttr *attr = pItem->GetAttributes();
+    wxItemAttr *attr = pItem->GetAttributes();
     if (attr && attr->HasBackgroundColour()) {
         return attr->GetBackgroundColour();
     } else {
@@ -2210,7 +2210,7 @@ wxColour wxTreeListMainWindow::GetItemBackgroundColour (const wxTreeItemId& item
 wxColour wxTreeListMainWindow::GetItemBackgroundColour (const wxTreeItemId& item, int column) const {
     wxCHECK_MSG (item.IsOk(), wxNullColour, _T("invalid tree item"));
     wxTreeListItem *pItem = (wxTreeListItem*) item.m_pItem;
-    wxTreeItemAttr *attr = pItem->GetAttributes(column);
+    wxItemAttr *attr = pItem->GetAttributes(column);
     if (attr && attr->HasBackgroundColour()) {
         return attr->GetBackgroundColour();
     } else {
@@ -2221,7 +2221,7 @@ wxColour wxTreeListMainWindow::GetItemBackgroundColour (const wxTreeItemId& item
 wxFont wxTreeListMainWindow::GetItemFont (const wxTreeItemId& item) const {
     wxCHECK_MSG (item.IsOk(), wxNullFont, _T("invalid tree item"));
     wxTreeListItem *pItem = (wxTreeListItem*) item.m_pItem;
-    wxTreeItemAttr *attr = pItem->GetAttributes();
+    wxItemAttr *attr = pItem->GetAttributes();
     if (attr && attr->HasFont()) {
         return attr->GetFont();
     }else if (pItem->IsBold()) {
@@ -2233,8 +2233,8 @@ wxFont wxTreeListMainWindow::GetItemFont (const wxTreeItemId& item) const {
 wxFont wxTreeListMainWindow::GetItemFont (const wxTreeItemId& item, int column) const {
     wxCHECK_MSG (item.IsOk(), wxNullFont, _T("invalid tree item"));
     wxTreeListItem *pItem = (wxTreeListItem*) item.m_pItem;
-    wxTreeItemAttr *attr_cell = pItem->GetAttributes(column);
-    wxTreeItemAttr *attr_row = pItem->GetAttributes();
+    wxItemAttr *attr_cell = pItem->GetAttributes(column);
+    wxItemAttr *attr_row = pItem->GetAttributes();
     if (attr_cell && attr_cell->HasFont()) {
         return attr_cell->GetFont();
     } else if (attr_row && attr_row->HasFont()) {

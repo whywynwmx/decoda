@@ -114,7 +114,7 @@ ProjectExplorerWindow::ProjectExplorerWindow(wxWindow* parent, wxWindowID winid)
 
     gSizer1->Add( gSizer2, 1, wxEXPAND, 5  );
 
-    m_tree = new wxTreeCtrl(this, winid, wxDefaultPosition, wxDefaultSize, wxTR_HAS_BUTTONS | wxTR_LINES_AT_ROOT | wxTR_HIDE_ROOT | wxTR_MULTIPLE | wxTR_EXTENDED);
+    m_tree = new wxTreeCtrl(this, winid, wxDefaultPosition, wxDefaultSize, wxTR_HAS_BUTTONS | wxTR_LINES_AT_ROOT | wxTR_HIDE_ROOT | wxTR_MULTIPLE);
     m_tree->AssignImageList(imageList);
 
     // The "best size" for the tree component must be 0 so that the tree control doesn't
@@ -226,7 +226,10 @@ void ProjectExplorerWindow::Rebuild()
 
     // Select the first item in the newly created list
     wxTreeItemId firstItem = m_tree->GetFirstVisibleItem();
-    m_tree->SelectItem(firstItem);
+    if (firstItem.IsOk()) {
+      m_tree->SelectItem(firstItem);
+    }
+   
 
 }
 

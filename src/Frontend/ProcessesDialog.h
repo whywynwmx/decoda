@@ -123,7 +123,7 @@ private:
     /**
      * Function used to sort the columns of the list box.
      */
-    static int wxCALLBACK SortCompareFunction(long item1, long item2, long sortData);
+    static int wxCALLBACK SortCompareFunction(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
 
 private:
 

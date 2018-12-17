@@ -216,10 +216,10 @@ void ProcessesDialog::UpdateAttachStatus()
 
 void ProcessesDialog::SortColumns()
 {
-    m_processList->SortItems(SortCompareFunction, reinterpret_cast<long>(this));
+    m_processList->SortItems(SortCompareFunction, reinterpret_cast<unsigned long long>(this));
 }
 
-int ProcessesDialog::SortCompareFunction(long item1, long item2, long sortData)
+int ProcessesDialog::SortCompareFunction(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData)
 {
     
     ProcessesDialog* self = reinterpret_cast<ProcessesDialog*>(sortData);

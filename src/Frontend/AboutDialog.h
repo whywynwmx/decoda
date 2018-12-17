@@ -23,6 +23,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef ABOUT_DIALOG_H
 #define ABOUT_DIALOG_H
 
+#include "Config.h"
 #include <wx/wx.h>
 #include <wx/hyperlink.h>
 
