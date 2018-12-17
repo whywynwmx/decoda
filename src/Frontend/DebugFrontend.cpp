@@ -194,9 +194,11 @@ bool DebugFrontend::InitializeBackend(const char* symbolsDirectory)
         return false;
     }
 
+    m_is32bitProcess = GetIs32BitProcess(m_processId);
+
     // Inject our debugger DLL into the process so that we can monitor from
     // inside the process's memory space.
-    if (!InjectDll(m_processId, "LuaInject32.dll"))
+    if (!InjectDll(m_processId, m_is32bitProcess ? "LuaInject32.dll" : "LuaInject64.dll"))
     {
         MessageEvent("Error: LuaInject.dll could not be loaded into the process", MessageType_Error);
         return false;
@@ -403,10 +405,29 @@ bool DebugFrontend::InjectDll(DWORD processId, const char* dllFileName)
 
 }
 
+bool DebugFrontend::GetIs32BitProcess(DWORD processId)
+{
+
+  HANDLE process = OpenProcess(PROCESS_ALL_ACCESS, FALSE, processId);
+
+  if (process == NULL) {
+    return false;
+  }
+
+  BOOL isWow64;
+  bool result = IsWow64Process(process, &isWow64) && isWow64;
+
+  if (process != NULL) {
+    CloseHandle(process);
+  }
+
+  return result;
+}
+
 bool DebugFrontend::GetIsBeingDebugged(DWORD processId)
 {
 
-    LPCSTR moduleFileName = "LuaInject.dll";
+    LPCSTR moduleFileName = "LuaInject64.dll";
 
     HANDLE process = OpenProcess(PROCESS_ALL_ACCESS, FALSE, processId);
 
@@ -416,6 +437,12 @@ bool DebugFrontend::GetIsBeingDebugged(DWORD processId)
     }
 
     bool result = false;
+
+    BOOL isWow64;
+    if (IsWow64Process(process, &isWow64) && isWow64) 
+    {
+      moduleFileName = "LuaInject32.dll";
+    }
 
     DWORD exitCode;
     char* remoteFileName = RemoteStrDup(process, moduleFileName);

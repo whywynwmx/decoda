@@ -224,6 +224,7 @@ private:
      */
     bool InjectDll(DWORD processId, const char* dllFileName);
 
+    bool GetIs32BitProcess(DWORD processId);
     /**
      * Executes an OS kernel function call inside another process.
      */
@@ -324,6 +325,7 @@ private:
 
     DWORD                       m_processId;
     HANDLE                      m_process;
+    bool			            m_is32bitProcess;
 
     wxEvtHandler*               m_eventHandler;    
     Channel                     m_eventChannel;
