@@ -1818,7 +1818,7 @@ void MainFrame::OnDebugEvent(wxDebugEvent& event)
 {
 
     char vmText[256];
-    sprintf(vmText, "0x%08x: ", event.GetVm());
+    sprintf(vmText, "0x%08p: ", reinterpret_cast<void*>(event.GetVm()));
 
     switch (event.GetEventId())
     {

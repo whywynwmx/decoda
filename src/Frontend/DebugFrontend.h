@@ -203,7 +203,7 @@ private:
 
     struct ExeInfo
     {
-        unsigned long   entryPoint;
+        unsigned long long   entryPoint;
         bool            managed;
         bool            i386;
     };

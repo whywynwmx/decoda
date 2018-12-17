@@ -297,7 +297,7 @@ bool DebugBackend::Initialize(HINSTANCE hInstance)
     // Give the front end the address of our Initialize function so that
     // it can call it once we're done loading.
     m_eventChannel.WriteUInt32(EventId_Initialize);
-    m_eventChannel.WriteUInt32(reinterpret_cast<unsigned int>(FinishInitialize));
+    m_eventChannel.WriteUInt64(reinterpret_cast<unsigned long long>(FinishInitialize));
     m_eventChannel.Flush();
 
     return true;
@@ -583,7 +583,7 @@ int DebugBackend::RegisterScript(lua_State* L, const char* source, size_t size, 
         script->source = std::string(source, size);
     }
     
-    unsigned int scriptIndex = m_scripts.size();
+    unsigned int scriptIndex = (unsigned int)m_scripts.size();
     m_scripts.push_back(script);
 
     m_nameToScript.insert(std::make_pair(name, scriptIndex));
@@ -2847,7 +2847,7 @@ std::string DebugBackend::GetAsciiString(const void* buffer, size_t length, bool
     converted.reserve(length);
     
     char* result = new char[length + 2]; 
-    size_t convertedLength = WideCharToMultiByte(CP_UTF8, 0, (const wchar_t*)string, length / sizeof(wchar_t), result, length + 1, 0, 0);
+    size_t convertedLength = WideCharToMultiByte(CP_UTF8, 0, (const wchar_t*)string, (int)(length / sizeof(wchar_t)), result, (int)length + 1, 0, 0);
 
     if (convertedLength != 0)
     {

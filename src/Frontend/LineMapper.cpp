@@ -107,8 +107,8 @@ void LineMapper::Diff(const std::vector<std::string>& X, const std::vector<std::
     // This is based off the description of the LCS algorithm here:
     // http://en.wikipedia.org/wiki/Longest_common_subsequence_problem
 
-    unsigned int m = X.size();
-    unsigned int n = Y.size();
+    unsigned int m = static_cast<unsigned int>(X.size());
+    unsigned int n = static_cast<unsigned int>(Y.size());
 
     m_oldToNew.resize( m );
     m_newToOld.resize( n );
@@ -213,12 +213,12 @@ void LineMapper::Diff(const std::vector<std::string>& X, const std::vector<std::
 void LineMapper::DivideIntoLines(const std::string& code, std::vector<std::string>& lines) const
 {
 
-    unsigned int s = 0;
+    size_t s = 0;
 
     while (s < code.length())
     {
         
-        unsigned int e = code.find('\n', s);
+        size_t e = code.find('\n', s);
 
         if (e == std::string::npos)
         {

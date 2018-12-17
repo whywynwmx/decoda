@@ -364,7 +364,7 @@ bool DebugFrontend::InjectDll(DWORD processId, const char* dllFileName)
         success = false;
     }
 
-    HMODULE dllHandle = reinterpret_cast<HMODULE>(exitCode);
+    HMODULE dllHandle = reinterpret_cast<HMODULE>((unsigned long long)exitCode);
 
     if (dllHandle == NULL)
     {
@@ -818,8 +818,8 @@ bool DebugFrontend::ProcessInitialization(const char* symbolsDirectory)
         return false;
     }
 
-    unsigned int function;
-    m_eventChannel.ReadUInt32(function);
+    unsigned long long function;
+    m_eventChannel.ReadUInt64(function);
 
     // Call the initializtion function.
 
@@ -961,7 +961,7 @@ char* DebugFrontend::RemoteStrDup(HANDLE process, const char* string)
     size_t length = strlen(string) + 1;
     void* remoteString = VirtualAllocEx(process, NULL, length, MEM_COMMIT, PAGE_READWRITE);
 
-    DWORD numBytesWritten;
+    SIZE_T numBytesWritten;
     WriteProcessMemory(process, remoteString, string, length, &numBytesWritten);
 
     return static_cast<char*>(remoteString);
@@ -1034,7 +1034,7 @@ void DebugFrontend::SetBreakpoint(HANDLE hProcess, LPVOID entryPoint, bool set, 
         if (set)
         {
 
-            DWORD numBytesRead;
+            SIZE_T numBytesRead;
             ReadProcessMemory(hProcess, entryPoint, data, 1, &numBytesRead);
 
             // Write the int 3 instruction.
@@ -1047,7 +1047,7 @@ void DebugFrontend::SetBreakpoint(HANDLE hProcess, LPVOID entryPoint, bool set, 
             buffer[0] = data[0];
         }
 
-        DWORD numBytesWritten;
+	SIZE_T numBytesWritten;
         WriteProcessMemory(hProcess, entryPoint, buffer, 1, &numBytesWritten);
 
         // Restore the original protections.
@@ -1059,6 +1059,8 @@ void DebugFrontend::SetBreakpoint(HANDLE hProcess, LPVOID entryPoint, bool set, 
     }
 
 }
+
+#define context_ip(ctx) (ctx).Rip
 
 bool DebugFrontend::StartProcessAndRunToEntry(LPCSTR exeFileName, LPSTR commandLine, LPCSTR directory, PROCESS_INFORMATION& processInfo)
 {
@@ -1073,11 +1075,6 @@ bool DebugFrontend::StartProcessAndRunToEntry(LPCSTR exeFileName, LPSTR commandL
         return false;
     }
 
-    if (!info.i386)
-    {
-        MessageEvent("Error: Debugging 64-bit applications is not supported", MessageType_Error);
-        return false;
-    }
 
     DWORD flags = DEBUG_PROCESS | DEBUG_ONLY_THIS_PROCESS;
 
@@ -1093,7 +1090,7 @@ bool DebugFrontend::StartProcessAndRunToEntry(LPCSTR exeFileName, LPSTR commandL
     if (!info.managed)
     {
 
-        unsigned long entryPoint = info.entryPoint;
+        unsigned long long entryPoint = info.entryPoint;
 
         BYTE breakPointData;
         bool done = false;
@@ -1117,7 +1114,7 @@ bool DebugFrontend::StartProcessAndRunToEntry(LPCSTR exeFileName, LPSTR commandL
 
                     GetThreadContext(processInfo.hThread, &context);
 
-                    if (context.Eip == entryPoint + 1)
+                    if (context_ip(context) == entryPoint + 1)
                     {
 
                         // Restore the original code bytes.
@@ -1125,7 +1122,7 @@ bool DebugFrontend::StartProcessAndRunToEntry(LPCSTR exeFileName, LPSTR commandL
                         done = true;
 
                         // Backup the instruction pointer so that we execute the original instruction.
-                        --context.Eip;
+                        --context_ip(context);
                         SetThreadContext(processInfo.hThread, &context);
 
                         // Suspend the thread before we continue the debug event so that the program
