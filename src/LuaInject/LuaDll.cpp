@@ -37,6 +37,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
+#include "detours.h"
 
 // Macro for convenient pointer addition.
 // Essentially treats the last two parameters as DWORDs.  The first
@@ -2323,6 +2324,17 @@ static PIMAGE_NT_HEADERS PEHeaderFromHModule(HMODULE hModule)
     return pNTHeader;
 }
 
+static BOOL CALLBACK fileImportcb(PVOID pContext, HMODULE hModule, LPCSTR pszFile)
+{
+  /* We get passed a null path and handle when we reach the end of the list */
+  if (pszFile != NULL) 
+  {
+    reinterpret_cast<std::vector<std::string>*>(pContext)->push_back(pszFile);
+  }
+ 
+  return TRUE;
+}
+
 /**
  * Gets a list of the files that are imported by a module.
  */
@@ -2336,23 +2348,9 @@ bool GetModuleImports(HANDLE hProcess, HMODULE hModule, std::vector<std::string>
         return false;
     }
 
-    DWORD importRVA = pExeNTHdr->OptionalHeader.DataDirectory
-                        [IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
-    if ( !importRVA )
+    if(!DetourEnumerateImportsEx(hModule, &imports, fileImportcb, NULL))
     {
-        return false;
-    }
-
-    // Convert imports RVA to a usable pointer
-    PIMAGE_IMPORT_DESCRIPTOR pImportDesc = MAKE_PTR( PIMAGE_IMPORT_DESCRIPTOR,
-                                                    hModule, importRVA );
-
-    // Iterate through each import descriptor, and redirect if appropriate
-    while ( pImportDesc->FirstThunk )
-    {
-        PSTR pszImportModuleName = MAKE_PTR( PSTR, hModule, pImportDesc->Name);
-        imports.push_back(pszImportModuleName);
-        pImportDesc++;  // Advance to next import descriptor
+      return false;
     }
 
     return true;
