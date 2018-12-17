@@ -55,7 +55,7 @@ project "Frontend"
     }
     libdirs {
         "libs/wxWidgets/lib/vc_x64_lib",
-        "libs/wxScintilla/lib",
+        "libs/wxScintilla/lib/vc_x64_lib",
         "build/libs/%{cfg.buildcfg}%{cfg.platform}",
     }
     links {
