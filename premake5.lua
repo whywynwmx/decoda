@@ -111,6 +111,7 @@ project "LuaInject"
     dependson { "tinyxml" }
     language "C++"
     defines { "TIXML_USE_STL" }
+    linkoptions { "/export:DetourFinishHelperProcess,@1,NONAME" }
     files {
         "src/LuaInject/*.h",
         "src/LuaInject/*.cpp",
@@ -120,14 +121,17 @@ project "LuaInject"
         "libs/LuaPlus/include",
         "libs/tinyxml/include",
         "libs/dbghlp/include",
+        "libs/Detours/include",
     }
     libdirs {
         "libs/dbghlp/lib",
         "build/libs/%{cfg.buildcfg}%{cfg.platform}",
+        "libs/Detours/lib",
     }
     links {
         "Shared",
-        "psapi"
+        "psapi",
+        "detours%{cfg.platform}",
     }
 
     filter "Debug"
