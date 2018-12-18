@@ -51,6 +51,12 @@ ProjectFileInfoCtrl::ProjectFileInfoCtrl(wxWindow* parent, wxWindowID id)
 
 }
 
+void ProjectFileInfoCtrl::SetFontColorSettings(const FontColorSettings& settings)
+{
+  m_fontColor = settings.GetColors(FontColorSettings::DisplayItem_Window).foreColor;
+  SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
+}
+
 void ProjectFileInfoCtrl::OnPaint(wxPaintEvent& event)
 {
 
@@ -107,6 +113,7 @@ void ProjectFileInfoCtrl::OnPaint(wxPaintEvent& event)
 
         result += path + fileName.GetFullName(); 
 
+        dc.SetTextForeground(m_fontColor);
         dc.DrawText(result, s_padding, s_padding);
     
     }

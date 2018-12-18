@@ -101,6 +101,12 @@ BreakpointsWindow::BreakpointsWindow(MainFrame* mainFrame, wxWindowID winid)
 
 }
 
+void BreakpointsWindow::SetFontColorSettings(const FontColorSettings& settings)
+{
+  m_breakpointList->SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
+  m_breakpointList->SetTextColour(settings.GetColors(FontColorSettings::DisplayItem_Window).foreColor);
+}
+
 void BreakpointsWindow::SetProject(Project* project)
 {
     m_project = project;

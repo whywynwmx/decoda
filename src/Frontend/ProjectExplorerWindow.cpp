@@ -146,6 +146,25 @@ ProjectExplorerWindow::~ProjectExplorerWindow()
     delete m_filterImageList;
 }
 
+
+void ProjectExplorerWindow::SetFontColorSettings(const FontColorSettings& settings)
+{
+  SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
+  m_tree->SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
+  m_tree->SetForegroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).foreColor);
+
+  m_searchBox->SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
+  m_searchBox->SetForegroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).foreColor);
+  m_searchBox->SetDefaultStyle(wxTextAttr(settings.GetColors(FontColorSettings::DisplayItem_Window).foreColor));
+
+  m_infoBox->SetFontColorSettings(settings);
+
+  m_itemColor = settings.GetColors(FontColorSettings::DisplayItem_WindowMargin).foreColor;
+  m_itemSelectBackground = settings.GetColors(FontColorSettings::DisplayItem_WindowMargin).backColor;
+
+  Rebuild();
+}
+
 void ProjectExplorerWindow::SetFocusToFilter()
 {
     // Select all of the text in the box (makes it easy to clear).
@@ -383,8 +402,8 @@ void ProjectExplorerWindow::AddSymbol(wxTreeItemId parent, Project::File* file, 
         fullName += " - " + symbol->module;
     }
 
-    m_tree->AppendItem(parent, fullName, Image_Function, Image_Function, data);
-
+    wxTreeItemId node = m_tree->AppendItem(parent, fullName, Image_Function, Image_Function, data);
+    m_tree->SetItemTextColour(node, m_itemColor);
 }
 
 void ProjectExplorerWindow::OnTreeItemExpanding(wxTreeEvent& event)

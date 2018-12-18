@@ -30,7 +30,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include <unordered_set>
 
 #include "Project.h"
-
+#include "FontColorSettings.h"
 //
 // Forward declarations.
 //
@@ -74,6 +74,12 @@ public:
      * Destructor.
      */
     virtual ~ProjectExplorerWindow();
+
+
+    /**
+    * Updates the colors of the panel to match the settings
+    */
+    void SetFontColorSettings(const FontColorSettings& settings);
 
     /**
      * Sets the keyboard focus to the filter text box.
@@ -188,7 +194,7 @@ public:
      * explorer window. These are a combination of the FilterFlag enum values.
      */
     unsigned int GetFilterFlags() const;
-    
+
     enum ID
     {
         ID_Filter       = 1,
@@ -288,7 +294,8 @@ private:
 
     wxMenu*                     m_contextMenu;
 
-
+    wxColor                     m_itemColor;
+	wxColor                     m_itemSelectBackground;
 };
 
 #endif

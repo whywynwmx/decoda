@@ -4640,7 +4640,18 @@ void MainFrame::UpdateEditorOptions()
     }
 
     // Set the font of the output window to match the code editor.
+    m_mgr.GetArtProvider()->SetColor(wxAUI_DOCKART_SASH_COLOUR, m_fontColorSettings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
+
+    m_searchWindow->SetFontColorSettings(m_fontColorSettings);
+    m_breakpointsWindow->SetFontColorSettings(m_fontColorSettings);
+    m_projectExplorer->SetFontColorSettings(m_fontColorSettings);
     m_output->SetFontColorSettings(m_fontColorSettings);
+    m_watch->SetFontColorSettings(m_fontColorSettings);
+    m_callStack->SetFontColorSettings(m_fontColorSettings);
+    m_vmList->SetFontColorSettings(m_fontColorSettings);
+
+    //Have to repaint to get the sash color.
+    this->Refresh();
 
     // Set the font of the watch window to match the code editor so
     // that non-ASCII text will be displayed properly.
