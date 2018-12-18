@@ -121,7 +121,7 @@ bool SymbolParser::ReadFile(const wxString& fileName, wxString& contents)
     
     if (length > 0)
     {
-        file.Read(wxStringBuffer(contents, length), length);
+        file.ReadAll(&contents);
     }
     else
     {
