@@ -29,7 +29,7 @@ AboutDialog::AboutDialog( wxWindow* parent ) :
 {
 
 	wxFlexGridSizer* fgSizer1;
-	fgSizer1 = new wxFlexGridSizer( 2, 1, 0, 0 );
+	fgSizer1 = new wxFlexGridSizer( 2, 0, 0, 0 );
 	fgSizer1->AddGrowableCol( 0 );
 	fgSizer1->SetFlexibleDirection( wxBOTH );
 	
@@ -86,7 +86,7 @@ AboutDialog::AboutDialog( wxWindow* parent ) :
 	fgSizer1->Add( fgSizer4, 1, wxALIGN_CENTER, 5 );
 	
 	wxFlexGridSizer* fgSizer2;
-	fgSizer2 = new wxFlexGridSizer( 2, 2, 0, 0 );
+	fgSizer2 = new wxFlexGridSizer( 0, 2, 0, 0 );
 	fgSizer2->AddGrowableRow( 1 );
 	fgSizer2->SetFlexibleDirection( wxBOTH );
 	

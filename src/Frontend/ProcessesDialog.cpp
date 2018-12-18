@@ -40,7 +40,7 @@ ProcessesDialog::ProcessesDialog( wxWindow* parent )
 {
 	
 	wxFlexGridSizer* fgSizer2;
-	fgSizer2 = new wxFlexGridSizer( 1, 1, 0, 0 );
+	fgSizer2 = new wxFlexGridSizer( 0, 1, 0, 0 );
 	fgSizer2->AddGrowableCol( 0 );
 	fgSizer2->AddGrowableRow( 0 );
 	fgSizer2->SetFlexibleDirection( wxBOTH );

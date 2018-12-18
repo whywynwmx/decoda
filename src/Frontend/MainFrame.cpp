@@ -268,7 +268,7 @@ BEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_FIND_NEXT(wxID_ANY,                         MainFrame::OnFindNext)
     
     EVT_ACTIVATE(                                   MainFrame::OnActivate)
-    EVT_THREAD(                                     MainFrame::OnThreadExit)
+    EVENT_THREAD(                                   MainFrame::OnThreadExit)
     
     EVT_COMMAND(wxID_ANY, wxEVT_SHOW_HELP_EVENT,    MainFrame::OnShowHelp)
 

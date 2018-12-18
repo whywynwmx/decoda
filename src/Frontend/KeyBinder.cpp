@@ -269,7 +269,13 @@ KeyBinder::Key KeyBinder::GetTextAsKeyBinding(const wxString& text)
     if (str.Contains(wxT("SHIFT")))
         key.flags |= wxACCEL_SHIFT;
 
-    key.code = StringToKeyCode(str.AfterLast('+').AfterLast('-'));
+    wxString find = str.AfterLast('+').AfterLast('-');
+
+    if (find.Length() == 0)
+        key.code = 0;
+    else
+        key.code = StringToKeyCode(find);
+    
     
     return key;
 
