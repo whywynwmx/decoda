@@ -208,6 +208,7 @@ private:
      */ 
     wxColor GetInverse(const wxColor& color);
 
+    bool m_autoCompleteOpening;
 private:
 
     int                             m_indentationSize;

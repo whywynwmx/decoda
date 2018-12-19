@@ -58,6 +58,7 @@ CodeEdit::CodeEdit()
 
     m_enableAutoComplete    = true;
     m_lineMappingDirty      = true;
+    m_autoCompleteOpening   = false;
 
 }
 
@@ -512,8 +513,12 @@ void CodeEdit::OnMouseLeave(wxMouseEvent& event)
 
 void CodeEdit::OnKillFocus(wxFocusEvent& event)
 {
-    AutoCompCancel();
-    HideToolTip();
+    if (!m_autoCompleteOpening)
+    {
+      AutoCompCancel(); 
+      HideToolTip();
+    }
+
     event.Skip();
 }
 
@@ -732,8 +737,12 @@ void CodeEdit::StartAutoCompletion(const wxString& token)
 
         if (!items.IsEmpty())
         {
+	    // Block OnKillFocus from closing auto completion before we even return from AutoCompShow.
+	    // wx pulls some ticks with the list box shown for auto completion that messes with the current focus.
+	    m_autoCompleteOpening = true;
             // Show the autocomplete selection list.
             AutoCompShow(prefix.Length(), items);
+	    m_autoCompleteOpening = false;
         }
         else
         {
