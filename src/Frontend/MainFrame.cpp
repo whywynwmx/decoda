@@ -1102,7 +1102,7 @@ void MainFrame::OnEditFindInFiles(wxCommandEvent& event)
         while (start < caseFileTypes.Length())
         {
 
-            unsigned int end = caseFileTypes.find(';', start);
+           size_t end = caseFileTypes.find(';', start);
 
             if (end == wxString::npos)
             {
@@ -3037,7 +3037,7 @@ bool MainFrame::ParseLuaErrorMessage(const wxString& error, wxString& fileName, 
     fileName = error;
     fileName.Trim(false);
 
-    int fileNameEnd;
+    size_t fileNameEnd;
     
     if (fileName.Length() >= 3 && isalpha(fileName[0]) && fileName[1] == ':' && wxIsPathSeparator(fileName[2]))
     {
@@ -3049,7 +3049,7 @@ bool MainFrame::ParseLuaErrorMessage(const wxString& error, wxString& fileName, 
         fileNameEnd = fileName.find(':');
     }
 
-    if (fileNameEnd == wxNOT_FOUND)
+    if (fileNameEnd == wxString::npos)
     {
         return false;
     }
@@ -5319,12 +5319,12 @@ bool MainFrame::FindInLine(const wxString& text, const wxString& line, bool matc
     if (matchWholeWord)
     {
 
-        int start = line.find(text);
+        size_t start = line.find(text);
 
-        while (start != wxNOT_FOUND)
+        while (start != wxString::npos)
         {
 
-            int end = start + text.Length();
+            size_t end = start + text.Length();
 
             // Check if the characters before and after the text are separators.
 
