@@ -125,6 +125,8 @@ void CodeEdit::SetFontColorSettings(const FontColorSettings& settings)
     StyleSetBackground(wxSTC_LUA_NUMBER,            settings.GetColors(FontColorSettings::DisplayItem_Number).backColor);
 
     StyleSetSize(wxSTC_STYLE_LINENUMBER, font.GetPointSize());
+    StyleSetForeground(wxSTC_STYLE_LINENUMBER, settings.GetColors(FontColorSettings::DisplayItem_LineNumbers).foreColor);
+    StyleSetBackground(wxSTC_STYLE_LINENUMBER, settings.GetColors(FontColorSettings::DisplayItem_LineNumbers).backColor);
 
     // Set the caret color as the inverse of the background color so it's always visible.
     SetCaretForeground( GetInverse(settings.GetColors(FontColorSettings::DisplayItem_Default).backColor) );
