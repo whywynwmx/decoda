@@ -246,7 +246,7 @@ void ProjectExplorerWindow::Rebuild()
     // Select the first item in the newly created list
     wxTreeItemId firstItem = m_tree->GetFirstVisibleItem();
     if (firstItem.IsOk()) {
-      m_tree->SelectItem(firstItem);
+     // m_tree->SelectItem(firstItem);
     }
    
 
