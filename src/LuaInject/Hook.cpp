@@ -31,7 +31,7 @@ HANDLE g_trampolineHeap = NULL;
 /**
  * Returns the size of the instruction at the specified point.
  */
-int GetInstructionSize(void* address, unsigned char* opcodeOut = NULL, int* operandSizeOut = NULL) 
+size_t GetInstructionSize(void* address, unsigned char* opcodeOut = NULL, int* operandSizeOut = NULL) 
 { 
     
     // Modified from http://www.devmaster.net/forums/showthread.php?p=47381
@@ -214,10 +214,10 @@ int GetInstructionSize(void* address, unsigned char* opcodeOut = NULL, int* oper
 /**
  * Returns the number of bytes until the next break in instructions.
  */
-int GetInstructionBoundary(void* function, int count)
+size_t GetInstructionBoundary(void* function, int count)
 {
 
-    int boundary = 0;
+    size_t boundary = 0;
 
     while (boundary < count)
     {
@@ -239,7 +239,7 @@ void WriteJump(void* dst, void* address)
 
     // Setup a jump instruction.
     jump[0] = 0xE9;
-    *((unsigned long*)(&jump[1])) = (unsigned long)(address) - (unsigned long)(dst) - 5;
+    *((unsigned long*)(&jump[1])) = static_cast<unsigned long>(reinterpret_cast<uintptr_t>(address) - reinterpret_cast<uintptr_t>(dst) - 5);
 
 }
 
@@ -251,7 +251,7 @@ void* ReadJump(void* src)
         const unsigned char* jump = static_cast<unsigned char*>(src);
         if (jump[0] == 0xE9)
         {   
-            address = reinterpret_cast<void*>(*((unsigned long*)(&jump[1])) + (unsigned long)(jump) + 5);
+            address = reinterpret_cast<void*>(*((unsigned long*)(&jump[1])) + reinterpret_cast<uintptr_t>(jump) + 5);
         }
     }
     __except (EXCEPTION_EXECUTE_HANDLER)
@@ -265,12 +265,12 @@ void* ReadJump(void* src)
  * the function specified. This is useful when a piece of code is moved in
  * memory.
  */
-void AdjustRelativeJumps(void* function, int length, int offset)
+void AdjustRelativeJumps(void* function, size_t length, int offset)
 {
 
     unsigned char* p = reinterpret_cast<unsigned char*>(function);
 
-    int i = 0;
+    size_t i = 0;
 
     while (i < length)
     {
@@ -278,7 +278,7 @@ void AdjustRelativeJumps(void* function, int length, int offset)
         unsigned char opcode = 0;
         int operandSize = 0;
 
-        int n = GetInstructionSize(p + i, &opcode, &operandSize);
+        size_t n = GetInstructionSize(p + i, &opcode, &operandSize);
 
         if (opcode == 0xE9 || opcode == 0xE8)
         {
@@ -343,7 +343,7 @@ void* HookFunction(void* function, void* hook)
     const int jumpSize = 5;
 
     // Compute the instruction boundary so we don't override half an instruction.
-    int boundary = GetInstructionBoundary(function, jumpSize);
+    size_t boundary = GetInstructionBoundary(function, jumpSize);
 
     if (g_trampolineHeap == NULL)
     {
@@ -364,7 +364,11 @@ void* HookFunction(void* function, void* hook)
     // to the original function (after our jump).
 
     memcpy(trampoline, function, boundary);
-    AdjustRelativeJumps(trampoline, boundary, ((unsigned char*)function) - trampoline);
+    ptrdiff_t distance = ((unsigned char*)function) - trampoline;
+    if (distance > MAXINT32) {
+      return NULL;
+    }
+    AdjustRelativeJumps(trampoline, boundary, static_cast<int>(distance));
 
     WriteJump(trampoline + boundary, ((unsigned char*)function) + boundary);
 
@@ -393,7 +397,7 @@ void* HookFunction(void* function, void* hook)
 
 }
 
-void* HookFunction(void* function, void* hook, unsigned long upValue)
+void* HookFunction(void* function, void* hook, uintptr_t upValue)
 {
 
     if (GetIsHooked(function, hook))
@@ -402,8 +406,8 @@ void* HookFunction(void* function, void* hook, unsigned long upValue)
         unsigned char* setup = static_cast<unsigned char*>(ReadJump(function));
         
         // Get the address of the trampoline function we stored before the setup code.
-        unsigned long trampoline = *((unsigned long*)(setup - 4));
-        return (void*)trampoline;
+        uintptr_t trampoline = *((unsigned long*)(setup - 4));
+        return reinterpret_cast<void*>(trampoline);
 
     }
 
@@ -417,7 +421,7 @@ void* HookFunction(void* function, void* hook, unsigned long upValue)
     const int storageSize = 5;
 
     // Compute the instruction boundary so we don't override half an instruction.
-    int boundary = GetInstructionBoundary(function, jumpSize);
+    size_t boundary = GetInstructionBoundary(function, jumpSize);
 
     if (g_trampolineHeap == NULL)
     {
@@ -448,7 +452,12 @@ void* HookFunction(void* function, void* hook, unsigned long upValue)
     // to the original function (after our jump).
 
     memcpy(trampoline, function, boundary);
-    AdjustRelativeJumps(trampoline, boundary, ((unsigned char*)function) - trampoline);
+    ptrdiff_t distance = ((unsigned char*)function) - trampoline;
+    if (distance > MAXINT32)
+    {
+      return NULL;
+    }
+    AdjustRelativeJumps(trampoline, boundary, static_cast<int>(distance));
 
     WriteJump(trampoline + boundary, ((unsigned char*)function) + boundary);
 
@@ -458,14 +467,14 @@ void* HookFunction(void* function, void* hook, unsigned long upValue)
 
     // Store the address to the trampoline code as the first 4 bytes
     // so that we can check this when attempting to rehook.
-    *((unsigned long*)(p + 0)) = (unsigned long)trampoline;
+    *((uintptr_t*)(p + 0)) = reinterpret_cast<uintptr_t>(trampoline);
     
     // push        eax  
     p[4] = 0x50;
     
     // mov         eax, 11223344h 
     p[5] = 0xB8;
-    *((unsigned long*)(p + 6)) = upValue;
+    *((uintptr_t*)(p + 6)) = upValue;
 
     // xchg        eax, dword ptr [esp+4] 
     p[10] = 0x87;
@@ -529,7 +538,7 @@ void* HookFunction_Detours(void* function, void* hook)
   return trampoline;
 }
 
-void* InstanceFunction(void* function, unsigned long upValue)
+void* InstanceFunction(void* function, uintptr_t upValue)
 {
 
     // Missing from windows.h
@@ -561,7 +570,7 @@ void* InstanceFunction(void* function, unsigned long upValue)
     
     // mov         eax, 11223344h 
     p[1] = 0xB8;
-    *((unsigned long*)(p + 2)) = upValue;
+    *((uintptr_t*)(p + 2)) = upValue;
 
     // xchg        eax, dword ptr [esp+4] 
     p[6] = 0x87;

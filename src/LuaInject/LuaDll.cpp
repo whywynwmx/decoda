@@ -790,7 +790,7 @@ void* lua_newuserdata_dll(int api, lua_State *L, size_t size)
 
 void EnableIntercepts(bool enableIntercepts)
 {
-    int value = reinterpret_cast<int>(TlsGetValue(g_disableInterceptIndex));
+    intptr_t value = reinterpret_cast<intptr_t>(TlsGetValue(g_disableInterceptIndex));
     if (enableIntercepts)
     {
         --value;
@@ -804,7 +804,7 @@ void EnableIntercepts(bool enableIntercepts)
 
 bool GetAreInterceptsEnabled()
 {
-    int value = reinterpret_cast<int>(TlsGetValue(g_disableInterceptIndex));
+    intptr_t value = reinterpret_cast<intptr_t>(TlsGetValue(g_disableInterceptIndex));
     return value <= 0;
 }
 
@@ -2864,6 +2864,6 @@ lua_CFunction CreateCFunction(int api, lua_CFunction_dll function)
     args->api       = api;
     args->function  = function;
 
-    return (lua_CFunction)InstanceFunction(CFunctionHandler, reinterpret_cast<unsigned long>(args));
+    return (lua_CFunction)InstanceFunction(CFunctionHandler, reinterpret_cast<uintptr_t>(args));
     
 }

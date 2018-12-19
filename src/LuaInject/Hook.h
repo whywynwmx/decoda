@@ -23,6 +23,8 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef HOOK_H
 #define HOOK_H
 
+#include "stdint.h"
+
 /**
  * Returns true if the specified function is already hooked. Functions
  * cannot be rehooked to the same hook, so this should be tested before
@@ -47,10 +49,10 @@ void* HookFunction_Detours(void* function, void* hook);
  * function is called and it's the reponsibility of the hook function
  * to remove that value before it returns.
  */
-void* HookFunction(void* function, void* hook, unsigned long upValue);
+void* HookFunction(void* function, void* hook, uintptr_t upValue);
 
 /**
  */
-void* InstanceFunction(void* function, unsigned long upValue);
+void* InstanceFunction(void* function, uintptr_t upValue);
 
 #endif
