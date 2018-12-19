@@ -46,9 +46,9 @@ AboutDialog::AboutDialog( wxWindow* parent ) :
 	
 	wxBoxSizer* bSizer4;
 	bSizer4 = new wxBoxSizer( wxVERTICAL );
-	
+
 	m_staticText3 = new wxStaticText( this, wxID_ANY, wxT("Decoda"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText3->SetFont( wxFont( 14, 74, 90, 92, false, wxT("Tahoma") ) );
+	m_staticText3->SetFont( wxFont( 14, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxT("Tahoma") ) );
 	
 	bSizer4->Add( m_staticText3, 0, wxALL, 5 );
 	
@@ -79,7 +79,7 @@ AboutDialog::AboutDialog( wxWindow* parent ) :
 	
 	fgSizer4->SetMinSize(wxSize( -1,50 )); 
 	m_staticText15 = new wxHyperlinkCtrl( this, wxID_ANY, wxT("Unknown Worlds Entertainment"), wxT("http://www.unknownworlds.com"), wxDefaultPosition, wxSize( -1,30 ));
-	m_staticText15->SetFont( wxFont( 8, 74, 90, 90, false, wxT("Tahoma") ) );
+	m_staticText15->SetFont( wxFont( 8, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxT("Tahoma") ) );
 	
 	fgSizer4->Add( m_staticText15, 0, wxALIGN_CENTER|wxALL, 5 );
 	
@@ -91,22 +91,22 @@ AboutDialog::AboutDialog( wxWindow* parent ) :
 	fgSizer2->SetFlexibleDirection( wxBOTH );
 	
 	m_staticText9 = new wxStaticText( this, wxID_ANY, wxT("Created by:"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText9->SetFont( wxFont( 8, 74, 90, 92, false, wxT("Tahoma") ) );
+	m_staticText9->SetFont( wxFont( 8, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxT("Tahoma") ) );
 	
 	fgSizer2->Add( m_staticText9, 0, wxALL, 5 );
 	
 	m_staticText10 = new wxStaticText( this, wxID_ANY, wxT("Max McGuire"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText10->SetFont( wxFont( 8, 74, 90, 90, false, wxT("Tahoma") ) );
+	m_staticText10->SetFont( wxFont( 8, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxT("Tahoma") ) );
 	
 	fgSizer2->Add( m_staticText10, 0, wxALL, 5 );
 	
 	m_staticText11 = new wxStaticText( this, wxID_ANY, wxT("Special thanks:"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText11->SetFont( wxFont( 8, 74, 90, 92, false, wxT("Tahoma") ) );
+	m_staticText11->SetFont( wxFont( 8, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxT("Tahoma") ) );
 	
 	fgSizer2->Add( m_staticText11, 0, wxALL, 5 );
 	
 	m_staticText12 = new wxStaticText( this, wxID_ANY, wxT("Charlie Cleveland, Bram de Greve, Garry Newman, Kurt Miller,\nJames Clarendon, Dan Higgins, Paul Nettle, Peter Loveday, Jeff Petkau,\nBrian Weed and the developers of wxWidgets, Scintilla and Lua"), wxDefaultPosition, wxSize( -1,70 ), 0 );
-	m_staticText12->SetFont( wxFont( 8, 74, 90, 90, false, wxT("Tahoma") ) );
+	m_staticText12->SetFont( wxFont( 8, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxT("Tahoma") ) );
 	
 	fgSizer2->Add( m_staticText12, 0, wxALL, 5 );
 	

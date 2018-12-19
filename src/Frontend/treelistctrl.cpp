@@ -1287,9 +1287,9 @@ wxTreeListHeaderWindow::~wxTreeListHeaderWindow()
 void wxTreeListHeaderWindow::DoDrawRect( wxDC *dc, int x, int y, int w, int h )
 {
 #if !wxCHECK_VERSION(2, 5, 0)
-    wxPen pen (wxSystemSettings::GetSystemColour (wxSYS_COLOUR_BTNSHADOW ), 1, wxSOLID);
+    wxPen pen (wxSystemSettings::GetSystemColour (wxSYS_COLOUR_BTNSHADOW ), 1, wxPENSTYLE_SOLID);
 #else
-    wxPen pen (wxSystemSettings::GetColour (wxSYS_COLOUR_BTNSHADOW ), 1, wxSOLID);
+    wxPen pen (wxSystemSettings::GetColour (wxSYS_COLOUR_BTNSHADOW ), 1, wxPENSTYLE_SOLID);
 #endif
 
     const int m_corner = 1;
@@ -1304,7 +1304,7 @@ void wxTreeListHeaderWindow::DoDrawRect( wxDC *dc, int x, int y, int w, int h )
     dc->DrawRectangle( x, y+h, w+1, 1 );          // bottom (outer)
 
 #if defined( __WXMAC__  )
-    pen = wxPen( wxColour( 0x88 , 0x88 , 0x88 ), 1, wxSOLID );
+    pen = wxPen( wxColour( 0x88 , 0x88 , 0x88 ), 1, wxPENSTYLE_SOLID );
 #endif
     dc->SetPen( pen );
     dc->DrawLine( x+w-m_corner, y, x+w-1, y+h );  // right (inner)
@@ -1487,7 +1487,7 @@ void wxTreeListHeaderWindow::DrawCurrent()
 
     wxScreenDC dc;
     dc.SetLogicalFunction (wxINVERT);
-    dc.SetPen (wxPen (*wxBLACK, 2, wxSOLID));
+    dc.SetPen (wxPen (*wxBLACK, 2, wxPENSTYLE_SOLID));
     dc.SetBrush (*wxTRANSPARENT_BRUSH);
 
     AdjustDC(dc);
@@ -1966,11 +1966,11 @@ void wxTreeListMainWindow::Init() {
     m_linespacing = 4;
 
 #if !wxCHECK_VERSION(2, 5, 0)
-    m_hilightBrush = new wxBrush (wxSystemSettings::GetSystemColour (wxSYS_COLOUR_HIGHLIGHT), wxSOLID);
-    m_hilightUnfocusedBrush = new wxBrush (wxSystemSettings::GetSystemColour (wxSYS_COLOUR_BTNSHADOW), wxSOLID);
+    m_hilightBrush = new wxBrush (wxSystemSettings::GetSystemColour (wxSYS_COLOUR_HIGHLIGHT), wxPENSTYLE_SOLID);
+    m_hilightUnfocusedBrush = new wxBrush (wxSystemSettings::GetSystemColour (wxSYS_COLOUR_BTNSHADOW), wxPENSTYLE_SOLID);
 #else
-    m_hilightBrush = new wxBrush (wxSystemSettings::GetColour (wxSYS_COLOUR_HIGHLIGHT), wxSOLID);
-    m_hilightUnfocusedBrush = new wxBrush (wxSystemSettings::GetColour (wxSYS_COLOUR_BTNSHADOW), wxSOLID);
+    m_hilightBrush = new wxBrush (wxSystemSettings::GetColour (wxSYS_COLOUR_HIGHLIGHT), wxBRUSHSTYLE_SOLID);
+    m_hilightUnfocusedBrush = new wxBrush (wxSystemSettings::GetColour (wxSYS_COLOUR_BTNSHADOW), wxBRUSHSTYLE_SOLID);
 #endif
 
     m_imageListNormal = (wxImageList *) NULL;
@@ -2004,7 +2004,7 @@ void wxTreeListMainWindow::Init() {
     m_boldFont = wxFont( m_normalFont.GetPointSize(),
                          m_normalFont.GetFamily(),
                          m_normalFont.GetStyle(),
-                         wxBOLD,
+                         wxFONTWEIGHT_BOLD,
                          m_normalFont.GetUnderlined(),
                          m_normalFont.GetFaceName(),
                          m_normalFont.GetEncoding());
@@ -2334,7 +2334,7 @@ bool wxTreeListMainWindow::SetFont (const wxFont &font) {
     m_boldFont = wxFont (m_normalFont.GetPointSize(),
                          m_normalFont.GetFamily(),
                          m_normalFont.GetStyle(),
-                         wxBOLD,
+                         wxFONTWEIGHT_BOLD,
                          m_normalFont.GetUnderlined(),
                          m_normalFont.GetFaceName());
     CalculateLineHeight();
@@ -3220,7 +3220,7 @@ wxTreeItemId wxTreeListMainWindow::FindItem (const wxTreeItemId& item, int colum
 
     // start checking the next items
     wxString itemText;
-    int col, col_start, col_end;
+    int col = 0, col_start, col_end;
     if (column >= 0) { col_start = col_end = col; }
     else { col_start = 0; col_end = GetColumnCount() - 1; }
     while (next.IsOk() && (next != item)) {
@@ -3392,7 +3392,7 @@ void wxTreeListMainWindow::PaintItem (wxTreeListItem *item, wxDC& dc) {
 
 // determine background and show it
 // in wxTR_FULL_ROW_HIGHLIGHT mode, some drawing can be done already now
-    dc.SetBrush (wxBrush ( colBg, wxSOLID));
+    dc.SetBrush (wxBrush ( colBg, wxBRUSHSTYLE_SOLID));
     dc.SetPen (*wxTRANSPARENT_PEN);
     if (HasFlag (wxTR_FULL_ROW_HIGHLIGHT)) {
         if (item->IsSelected()) {
@@ -3482,7 +3482,7 @@ void wxTreeListMainWindow::PaintItem (wxTreeListItem *item, wxDC& dc) {
             if (item->IsSelected() && i == GetMainColumn()) {
                 // draw normal background
                 dc.SetPen (*wxTRANSPARENT_PEN);
-                dc.SetBrush (wxBrush ( colBg, wxSOLID));
+                dc.SetBrush (wxBrush ( colBg, wxBRUSHSTYLE_SOLID));
                 dc.DrawRectangle (x_colstart, item->GetY() + off_h, col_w, total_h - off_h);
                 // draw selection & optionally cursor
                 dc.SetPen (drawCursor ? *wxBLACK_PEN : *wxTRANSPARENT_PEN);
@@ -3493,7 +3493,7 @@ void wxTreeListMainWindow::PaintItem (wxTreeListItem *item, wxDC& dc) {
             } else {
                 // draw normal background & optionally cursor
                 dc.SetPen (drawCursor && i != GetMainColumn() ? *wxBLACK_PEN : *wxTRANSPARENT_PEN);
-                dc.SetBrush (wxBrush ( colBg, wxSOLID));
+                dc.SetBrush (wxBrush ( colBg, wxBRUSHSTYLE_SOLID));
                 dc.SetTextForeground (colText);
                 dc.DrawRectangle (x_colstart, item->GetY() + off_h, col_w, total_h - off_h);
                 // on main col draw a separate cursor
@@ -3508,9 +3508,9 @@ void wxTreeListMainWindow::PaintItem (wxTreeListItem *item, wxDC& dc) {
         // draw vertical column lines
         if (HasFlag(wxTR_COLUMN_LINES)) { // vertical lines between columns
 #if !wxCHECK_VERSION(2, 5, 0)
-            wxPen pen (wxSystemSettings::GetSystemColour (wxSYS_COLOUR_3DLIGHT ), 1, wxSOLID);
+            wxPen pen (wxSystemSettings::GetSystemColour (wxSYS_COLOUR_3DLIGHT ), 1, wxPENSTYLE_SOLID);
 #else
-            wxPen pen (wxSystemSettings::GetColour (wxSYS_COLOUR_3DLIGHT ), 1, wxSOLID);
+            wxPen pen (wxSystemSettings::GetColour (wxSYS_COLOUR_3DLIGHT ), 1, wxPENSTYLE_SOLID);
 #endif
             dc.SetPen ((GetBackgroundColour() == *wxWHITE)? pen: *wxWHITE_PEN);
             dc.DrawLine (x_colstart+col_w-1, item->GetY(), x_colstart+col_w-1, item->GetY()+total_h);
@@ -3583,9 +3583,9 @@ void wxTreeListMainWindow::PaintLevel (wxTreeListItem *item, wxDC &dc,
             // if the background colour is white, choose a
             // contrasting color for the lines
 #if !wxCHECK_VERSION(2, 5, 0)
-            wxPen pen (wxSystemSettings::GetSystemColour (wxSYS_COLOUR_3DLIGHT ), 1, wxSOLID);
+            wxPen pen (wxSystemSettings::GetSystemColour (wxSYS_COLOUR_3DLIGHT ), 1, wxPENSTYLE_SOLID);
 #else
-            wxPen pen (wxSystemSettings::GetColour (wxSYS_COLOUR_3DLIGHT ), 1, wxSOLID);
+            wxPen pen (wxSystemSettings::GetColour (wxSYS_COLOUR_3DLIGHT ), 1, wxPENSTYLE_SOLID);
 #endif
             dc.SetPen ((GetBackgroundColour() == *wxWHITE)? pen: *wxWHITE_PEN);
             dc.DrawLine (0, y_top, total_width, y_top);
@@ -3730,7 +3730,7 @@ void wxTreeListMainWindow::OnPaint (wxPaintEvent &WXUNUSED(event)) {
 
     // init device context, clear background (BEFORE changing DC origin...)
     wxAutoBufferedPaintDC dc (this);
-    wxBrush brush(GetBackgroundColour(), wxSOLID);
+    wxBrush brush(GetBackgroundColour(), wxBRUSHSTYLE_SOLID);
     dc.SetBackground(brush);
     dc.Clear();
     DoPrepareDC (dc);
