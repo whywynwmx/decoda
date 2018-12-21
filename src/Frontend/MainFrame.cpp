@@ -3530,8 +3530,8 @@ void MainFrame::OnFindReplaceAll(wxFindDialogEvent& event)
         while (searchStart < searchEnd)
         {
 
-            int length;
-            int start = file->edit->FindText(searchStart, searchEnd, event.GetFindString(), flags, &length);
+            int end;
+            int start = file->edit->FindText(searchStart, searchEnd, event.GetFindString(), flags, &end);
 
             if (start != -1)
             {
@@ -3539,7 +3539,7 @@ void MainFrame::OnFindReplaceAll(wxFindDialogEvent& event)
                 // Replace the text.
 
                 file->edit->SetTargetStart(start);
-                file->edit->SetTargetEnd(start + length);
+                file->edit->SetTargetEnd(end);
                 file->edit->ReplaceTarget(event.GetReplaceString());
 
                 searchStart = start + event.GetReplaceString().Length();
@@ -3620,8 +3620,8 @@ void MainFrame::FindText(OpenFile* file, const wxString& text, int flags)
     }
 
 
-    int length;
-    int start = file->edit->FindText(searchStart, searchEnd, text, f, &length);
+    int end;
+    int start = file->edit->FindText(searchStart, searchEnd, text, f, &end);
 
     if (start == -1)
     {
@@ -3652,15 +3652,17 @@ void MainFrame::FindText(OpenFile* file, const wxString& text, int flags)
             searchStart = file->edit->GetLength();
         }
 
-        start = file->edit->FindText(searchStart, searchEnd, text, f, &length);
+        start = file->edit->FindText(searchStart, searchEnd, text, f, &end);
 
     }
 
     if (start != -1 && text.Length() > 0)
     {
-
+        CodeEdit* editor = file->edit;
+        GotoNewLine(editor, editor->LineFromPosition(start), true);
+  
         // Select the found text.
-        file->edit->SetSelection(start, start + length);
+        editor->SetSelection(start, end);
         m_lastFindPosition = file->edit->GetCurrentPos();
 
         // Check to see if we reached the start point of the search.
