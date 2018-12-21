@@ -31,12 +31,9 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 
 class MainFrame;
 class FontColorSettings;
+class OutputTextbox;
 
-/**
- *
- */
-class OutputWindow : public wxTextCtrl
-{
+class OutputWindow : public wxPanel {
 
 public:
 
@@ -44,6 +41,64 @@ public:
      * Constructor.
      */
     OutputWindow(MainFrame* mainFrame, wxWindowID winid);
+
+    /**
+     * Sets the font and color settings used in the output window.
+     */
+    void SetFontColorSettings(const FontColorSettings& settings);
+
+    /**
+     * Adds a message to the end of the log.
+     */
+    void OutputMessage(const wxString& message);
+
+    /**
+     * Adds a warning message to the end of the log.
+     */
+    void OutputWarning(const wxString& message);
+
+    /**
+     * Adds an error message to the end of the log.
+     */
+    void OutputError(const wxString& message);
+
+    /**
+     * Returns the line that the cursor is positioned on.
+     */
+    int GetCurrentLine() const;
+
+    void Clear();
+    
+    wxString GetLineText(int row);
+
+private:
+
+    /**
+     * Outputs text using the passed in text attribute. This method will only
+     * cause the output window to scroll down if the insertion point is already
+     * at the bottom of the text.
+     */
+    void SharedOutput(const wxString& message, const wxTextAttr& textAttr);
+
+    MainFrame*     m_mainFrame;
+    OutputTextbox* m_textbox;
+
+    wxTextAttr  m_messageAttr;
+    wxTextAttr  m_warningAttr;
+    wxTextAttr  m_errorAttr;
+};
+
+/**
+ *
+ */
+class OutputTextbox : public wxTextCtrl
+{
+
+public:
+    /**
+     * Constructor.
+     */
+    OutputTextbox(OutputWindow* parent, MainFrame*  m_mainFrame, wxWindowID winid);
     
     /**
      * Sets the font and color settings used in the output window.
@@ -83,7 +138,7 @@ public:
     DECLARE_EVENT_TABLE()
 
 private:
-
+    friend OutputWindow;
     /**
      * Outputs text using the passed in text attribute. This method will only
      * cause the output window to scroll down if the insertion point is already
@@ -92,10 +147,6 @@ private:
     void SharedOutput(const wxString& message, const wxTextAttr& textAttr);
 
     MainFrame*  m_mainFrame;
-
-    wxTextAttr  m_messageAttr;
-    wxTextAttr  m_warningAttr;
-    wxTextAttr  m_errorAttr;
 
 };
 

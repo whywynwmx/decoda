@@ -26,16 +26,61 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 
 DEFINE_EVENT_TYPE(wxEVT_OUTPUT_KEY_DOWN)
 
-BEGIN_EVENT_TABLE(OutputWindow, wxTextCtrl)
-    EVT_LEFT_DCLICK(        OutputWindow::OnDoubleClick)
-    EVT_KEY_DOWN(           OutputWindow::OnKeyDown)
+BEGIN_EVENT_TABLE(OutputTextbox, wxTextCtrl)
+    EVT_LEFT_DCLICK(        OutputTextbox::OnDoubleClick)
+    EVT_KEY_DOWN(           OutputTextbox::OnKeyDown)
 END_EVENT_TABLE()
 
 
 OutputWindow::OutputWindow(MainFrame* mainFrame, wxWindowID winid)
-    : wxTextCtrl(mainFrame, winid, _(""), wxDefaultPosition, wxSize(200,150), wxTE_MULTILINE | wxTE_READONLY | wxTE_DONTWRAP | wxTE_RICH | wxBORDER_SUNKEN)
+    : wxPanel(mainFrame)
 {
     m_mainFrame = mainFrame;
+    m_textbox = new OutputTextbox(this, mainFrame, winid);
+
+    wxBoxSizer* bSizer = new wxBoxSizer(wxVERTICAL);
+
+    bSizer->Add(m_textbox, 1, wxEXPAND);
+    SetSizer(bSizer);
+    Layout();
+}
+
+void OutputWindow::OutputMessage(const wxString& message)
+{
+    m_textbox->SharedOutput(message, m_messageAttr);
+}
+
+void OutputWindow::OutputWarning(const wxString& message)
+{
+    m_textbox->SharedOutput(message, m_warningAttr);
+}
+
+void OutputWindow::OutputError(const wxString& message)
+{
+    m_textbox->SharedOutput(message, m_errorAttr);
+}
+
+
+void OutputWindow::Clear()
+{
+    m_textbox->Clear();
+}
+
+wxString OutputWindow::GetLineText(int row)
+{
+    return m_textbox->GetLineText(row);
+}
+
+int OutputWindow::GetCurrentLine() const
+{
+
+    long pos = m_textbox->GetInsertionPoint();
+
+    long x, y;
+    m_textbox->PositionToXY(pos, &x, &y);
+
+    return y;
+
 }
 
 void OutputWindow::SetFontColorSettings(const FontColorSettings& settings)
@@ -44,9 +89,9 @@ void OutputWindow::SetFontColorSettings(const FontColorSettings& settings)
     // Since we don't save enough information to reapply styles to the existing text,
     // clear everything. This is lame, but changing font settings isn't something that
     // happens often enough for it to really make much difference.
-    Clear();
+    m_textbox->Clear();
 
-    SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
+    m_textbox->SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
 
     m_messageAttr.SetTextColour(settings.GetColors(FontColorSettings::DisplayItem_Window).foreColor);
     m_messageAttr.SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
@@ -55,14 +100,20 @@ void OutputWindow::SetFontColorSettings(const FontColorSettings& settings)
     m_warningAttr.SetTextColour(settings.GetColors(FontColorSettings::DisplayItem_Warning).foreColor);
     m_warningAttr.SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
     m_warningAttr.SetFont(settings.GetFont(FontColorSettings::DisplayItem_Warning));
-    
+
     m_errorAttr.SetTextColour(settings.GetColors(FontColorSettings::DisplayItem_Error).foreColor);
     m_errorAttr.SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
     m_errorAttr.SetFont(settings.GetFont(FontColorSettings::DisplayItem_Error));
 
 }
 
-void OutputWindow::OnDoubleClick(wxMouseEvent& event)
+OutputTextbox::OutputTextbox(OutputWindow* parent, MainFrame*  mainFrame, wxWindowID winid)
+    : wxTextCtrl(parent, winid, _(""), wxDefaultPosition, wxSize(200, 150), wxTE_MULTILINE | wxTE_READONLY | wxTE_DONTWRAP | wxTE_RICH)
+{
+    m_mainFrame = mainFrame;
+}
+
+void OutputTextbox::OnDoubleClick(wxMouseEvent& event)
 {
     
     wxTextCoord col, row;
@@ -73,7 +124,7 @@ void OutputWindow::OnDoubleClick(wxMouseEvent& event)
 
 }
 
-void OutputWindow::OnKeyDown(wxKeyEvent& event)
+void OutputTextbox::OnKeyDown(wxKeyEvent& event)
 {
 
     // Send the key event to our parent.
@@ -95,22 +146,7 @@ void OutputWindow::OnKeyDown(wxKeyEvent& event)
 
 }
 
-void OutputWindow::OutputMessage(const wxString& message)
-{
-    SharedOutput(message, m_messageAttr);
-}
-
-void OutputWindow::OutputWarning(const wxString& message)
-{
-    SharedOutput(message, m_warningAttr);
-}
-
-void OutputWindow::OutputError(const wxString& message)
-{
-    SharedOutput(message, m_errorAttr);
-}
-
-void OutputWindow::SharedOutput(const wxString& message, const wxTextAttr& textAttr)
+void OutputTextbox::SharedOutput(const wxString& message, const wxTextAttr& textAttr)
 {
     int beforeAppendPosition = GetInsertionPoint();
     int beforeAppendLastPosition = GetLastPosition();
@@ -125,16 +161,4 @@ void OutputWindow::SharedOutput(const wxString& message, const wxTextAttr& textA
         ShowPosition(GetLastPosition());
         ScrollLines(-1);
     }
-}
-
-int OutputWindow::GetCurrentLine() const
-{
-
-    long pos = GetInsertionPoint();
-
-    long x, y;
-    PositionToXY(pos, &x, &y);
-
-    return y;
-
 }
