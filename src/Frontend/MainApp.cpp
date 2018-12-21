@@ -80,6 +80,7 @@ bool MainApp::OnInit()
     wxImage::AddHandler(new wxPNGHandler);
 
     MainFrame* frame = new MainFrame("Script Debugger", openFilesMessage, wxDefaultPosition, wxSize(1024,768));
+    frame->Show();
 
     HWND hWndPrev = m_singleInstance.Connect(reinterpret_cast<HWND>(frame->GetHandle()), "Decoda");
 
