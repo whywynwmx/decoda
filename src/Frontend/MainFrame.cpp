@@ -2701,10 +2701,13 @@ void MainFrame::OnBreak(wxDebugEvent& event)
         if (file == NULL)
         {
             file = OpenScript(m_breakScriptIndex);
+        } 
+        else 
+        {
+            /* Dont't set the marker twice since OpenScript will do it for us */
+            unsigned int newLine = OldToNewLine(file->file, m_breakLine);
+            file->edit->MarkerAdd(newLine, CodeEdit::Marker_BreakLine);
         }
-
-        unsigned int newLine = OldToNewLine(file->file, m_breakLine);
-        file->edit->MarkerAdd(newLine, CodeEdit::Marker_BreakLine);
 
         ShowScriptLine(event.GetScriptIndex(), event.GetLine());
     
