@@ -261,6 +261,7 @@ struct LuaInterface
     LuaAPIPtr<lua_State*  (int stacksize)>                                lua_open_dll;
     LuaAPIPtr<lua_State*  ()>                                             lua_open_500_dll;
     LuaAPIPtr<lua_State*  (lua_Alloc, void*)>                             lua_newstate_dll;
+    LuaAPIPtr<lua_State*  (lua_Alloc, void*)>                             lua_newstate64_dll;
     LuaAPIPtr<void (lua_State*)>                                          lua_close_dll;
     LuaAPIPtr<lua_State*  (lua_State*)>                                   lua_newthread_dll;
     LuaAPIPtr<int (lua_State*)>                                           lua_error_dll;
@@ -2123,7 +2124,11 @@ bool LoadLuaFunctions(const std::unordered_map<std::string, DWORD64>& symbols, H
     GET_FUNCTION_OPTIONAL(lua_open);
     if (!luaInterface.lua_open_dll.GetFunction())
     {
-        GET_FUNCTION(lua_newstate);
+      GET_FUNCTION_OPTIONAL(lua_newstate);
+      if (!luaInterface.lua_newstate_dll.GetFunction()) {
+          GET_FUNCTION(lua_newstate64);
+          luaInterface.lua_newstate_dll.SetFunction(luaInterface.lua_newstate64_dll);
+      }
     }
 
     // Start reporting errors about functions we couldn't hook.
