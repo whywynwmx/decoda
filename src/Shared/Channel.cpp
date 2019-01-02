@@ -167,6 +167,12 @@ bool Channel::Write(const void* buffer, unsigned int length)
 
 }
 
+bool Channel::WriteInt32(int value)
+{
+    int temp = value;
+    return Write(&temp, 4);
+}
+
 bool Channel::WriteUInt32(unsigned int value)
 {
     DWORD temp = value;
@@ -222,6 +228,16 @@ bool Channel::WriteWString(const std::wstring& value)
 bool Channel::WriteBool(bool value)
 {
     return WriteUInt32(value ? 1 : 0);
+}
+
+bool Channel::ReadInt32(int& value)
+{
+    int temp;
+    if (!Read(&temp, 4)) {
+        return false;
+    }
+    value = temp;
+    return true;
 }
 
 bool Channel::ReadUInt32(unsigned int& value)

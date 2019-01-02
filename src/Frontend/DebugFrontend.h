@@ -54,8 +54,8 @@ public:
 
     struct StackFrame
     {
-        unsigned int    scriptIndex;
-        unsigned int    line;
+        int    scriptIndex;
+        int    line;
         std::string     function;
     };
 
@@ -154,7 +154,7 @@ public:
     /**
      * Toggles a breakpoint on the specified line.
      */
-    void ToggleBreakpoint(VMHandle vm, unsigned int scriptIndex, unsigned int line);
+    void ToggleBreakpoint(VMHandle vm, int scriptIndex, unsigned int line);
     
     /**
      * Removes all breakpoints set this will also disable the line hook if the debug mode is set to continue
@@ -164,13 +164,13 @@ public:
     /**
      * Returns the specified script.
      */
-    Script* GetScript(unsigned int scriptIndex);
+    Script* GetScript(int scriptIndex);
 
     /**
      * Returns the index of the script with te specified name. If the name could not be
      * matched the method returns -1.
      */
-    unsigned int GetScriptIndex(const char* name) const;
+    int GetScriptIndex(const char* name) const;
 
     /**
      * Returns the number of frames in the call stack.

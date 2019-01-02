@@ -1252,7 +1252,7 @@ void DebugBackend::Break()
     ActiveLuaHookInAllVms();
 }
 
-void DebugBackend::ToggleBreakpoint(lua_State* L, unsigned int scriptIndex, unsigned int line)
+void DebugBackend::ToggleBreakpoint(lua_State* L, int scriptIndex, unsigned int line)
 {
 
     assert(GetIsLuaLoaded());
@@ -1302,7 +1302,7 @@ void DebugBackend::ToggleBreakpoint(lua_State* L, unsigned int scriptIndex, unsi
         // Send back the event telling the frontend that we set/unset the breakpoint.
         m_eventChannel.WriteUInt32(EventId_SetBreakpoint);    
         m_eventChannel.WriteUInt64(reinterpret_cast<unsigned long long>(L));  
-        m_eventChannel.WriteUInt32(scriptIndex);
+        m_eventChannel.WriteInt32(scriptIndex);
         m_eventChannel.WriteUInt32(line);
         m_eventChannel.WriteUInt32(breakpointSet);
         m_eventChannel.Flush();
@@ -1423,7 +1423,7 @@ void DebugBackend::SendBreakEvent(int api, lua_State* L, int stackTop)
     for (unsigned int i = 0; i < stackSize; ++i)
     {
         unsigned int stackIndex = stackSize - i - 1;
-        m_eventChannel.WriteUInt32(stack[stackIndex].scriptIndex);
+        m_eventChannel.WriteInt32(stack[stackIndex].scriptIndex);
         m_eventChannel.WriteUInt32(stack[stackIndex].line);
         m_eventChannel.WriteString(stack[stackIndex].name);
     }

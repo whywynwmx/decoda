@@ -71,6 +71,11 @@ public:
      */
     bool WriteUInt32(unsigned int value);
 
+    /**
+     * Writes a 32-bit integer to the channel and returns immediately.
+     */
+    bool WriteInt32(int value);
+
     bool WriteUInt64(unsigned long long value);
     /**
      * Writes a string to the channel and returns immediately.
@@ -89,6 +94,12 @@ public:
      */
     bool WriteBool(bool value);
 
+
+    /**
+     * Reads a 32-bit signed integer from the channel. This operation blocks
+     * until the data is available.
+     */
+    bool ReadInt32(int& value);
     /**
      * Reads a 32-bit unsigned integer from the channel. This operation blocks
      * until the data is available.

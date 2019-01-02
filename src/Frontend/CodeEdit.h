@@ -177,7 +177,7 @@ private:
     /**
      * Returns the first non-whitespace character in the text.
      */
-    unsigned int GetFirstNonWhitespace(const wxString& text) const;
+    int GetFirstNonWhitespace(const wxString& text) const;
 
     /**
      * Returns true if the character can appear in an identifier name.

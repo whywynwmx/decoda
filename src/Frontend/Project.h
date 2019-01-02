@@ -60,7 +60,7 @@ public:
 
         CodeState                   state;
         bool                        temporary;
-        unsigned int                scriptIndex;
+        int                         scriptIndex;
         wxFileName                  fileName;
         std::vector<unsigned int>   breakpoints;
         wxString                    tempName;

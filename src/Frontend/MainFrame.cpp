@@ -2660,7 +2660,7 @@ void MainFrame::ShowScriptLine(unsigned int scriptIndex, unsigned int line)
 
 }
 
-MainFrame::OpenFile* MainFrame::GetFileForScript(unsigned int scriptIndex) const
+MainFrame::OpenFile* MainFrame::GetFileForScript(int scriptIndex) const
 {
 
     for (unsigned int i = 0; i < m_openFiles.size(); ++i)
@@ -3081,7 +3081,7 @@ bool MainFrame::ParseLuacErrorMessage(const wxString& error, wxString& fileName,
 
 }
 
-unsigned int MainFrame::GetScriptIndex(wxStyledTextCtrl* edit) const
+int MainFrame::GetScriptIndex(wxStyledTextCtrl* edit) const
 {
     for (unsigned int i = 0; i < m_openFiles.size(); ++i)
     {
@@ -4831,8 +4831,6 @@ void MainFrame::DeleteAllBreakpoints()
             openFile = m_openFiles[openFileIndex];
         }
 
-        unsigned int scriptIndex = file->scriptIndex;
-
         for (unsigned int breakpointIndex = 0; breakpointIndex < file->breakpoints.size(); ++breakpointIndex)
         {
 
@@ -5383,7 +5381,7 @@ void MainFrame::CleanUpTemporaryFiles()
 
     m_projectExplorer->RemoveFiles(files);
 
-    for (unsigned int i = 0; i < files.size(); ++i)
+    for (size_t i = 0; i < files.size(); ++i)
     {
         m_project->RemoveFile(files[i]);
     }
@@ -5392,14 +5390,14 @@ void MainFrame::CleanUpTemporaryFiles()
 
 }
 
-unsigned int MainFrame::GetOpenFileIndex(Project::File* file) const
+int MainFrame::GetOpenFileIndex(Project::File* file) const
 {
 
-    for (unsigned int i = 0; i < m_openFiles.size(); ++i)
+    for (size_t i = 0; i < m_openFiles.size(); ++i)
     {
         if (m_openFiles[i]->file == file)
         {
-            return i;
+            return static_cast<int>(i);
         }
     }
 

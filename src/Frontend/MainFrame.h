@@ -959,7 +959,7 @@ private:
      * Gets the index of the script associated with an edit control. If there's no script
      * associated with it the method returns -1.
      */
-    unsigned int GetScriptIndex(wxStyledTextCtrl* edit) const;
+    int GetScriptIndex(wxStyledTextCtrl* edit) const;
 
     /**
      * Sets the vm that the UI is controlling/inspecting.
@@ -1035,7 +1035,7 @@ private:
      * Returns the open file that corresponds to the scriptIndex. If the
      * file is not opened the method retrns NULL.
      */
-    OpenFile* GetFileForScript(unsigned int scriptIndex) const;
+    OpenFile* GetFileForScript(int scriptIndex) const;
 
     /**
      * Opens script code from the debugger into the editor.
@@ -1184,7 +1184,7 @@ private:
      * Returns the index into the open files array for the specified project file. If
      * the project file is not open, the method returns -1.
      */
-    unsigned int GetOpenFileIndex(Project::File* file) const;
+    int GetOpenFileIndex(Project::File* file) const;
 
     /**
      * Initiates debugging using the current project settings. If no executable is
@@ -1459,11 +1459,11 @@ private:
     std::vector<unsigned int>       m_vms;
     unsigned int                    m_stackLevel;
 
-    unsigned int                    m_currentScriptIndex;
-    unsigned int                    m_currentLine;
+    int                             m_currentScriptIndex;
+    int                             m_currentLine;
     
-    unsigned int                    m_breakScriptIndex;
-    unsigned int                    m_breakLine;
+    int                             m_breakScriptIndex;
+    int                             m_breakLine;
 
     std::vector<ExternalTool*>      m_tools;
     std::vector<wxProcess*>         m_runningProcesses;

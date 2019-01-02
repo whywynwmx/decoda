@@ -554,7 +554,7 @@ void DebugFrontend::EventThreadProc()
             // file bad.
             script->name = MakeValidFileName(script->name);
 
-            unsigned int scriptIndex = m_scripts.size();
+            int scriptIndex = m_scripts.size();
             m_scripts.push_back(script);
         
             event.SetScriptIndex(scriptIndex);
@@ -572,14 +572,14 @@ void DebugFrontend::EventThreadProc()
             for (unsigned int i = 0; i < numStackFrames; ++i)
             {
 
-                m_eventChannel.ReadUInt32(m_stackFrames[i].scriptIndex);
+                m_eventChannel.ReadInt32(m_stackFrames[i].scriptIndex);
 
                 if (m_stackFrames[i].scriptIndex != -1)
                 {
                     assert(m_stackFrames[i].scriptIndex < m_scripts.size());
                 }
 
-                m_eventChannel.ReadUInt32(m_stackFrames[i].line);
+                m_eventChannel.ReadInt32(m_stackFrames[i].line);
                 m_eventChannel.ReadString(m_stackFrames[i].function);
             
             }
@@ -594,8 +594,8 @@ void DebugFrontend::EventThreadProc()
         else if (eventId == EventId_SetBreakpoint)
         {
             
-            unsigned int scriptIndex;
-            m_eventChannel.ReadUInt32(scriptIndex);
+            int scriptIndex;
+            m_eventChannel.ReadInt32(scriptIndex);
             
             unsigned int line;
             m_eventChannel.ReadUInt32(line);
@@ -756,12 +756,12 @@ bool DebugFrontend::Evaluate(VMHandle vm, const char* expression, unsigned int s
 
 }
 
-void DebugFrontend::ToggleBreakpoint(VMHandle vm, unsigned int scriptIndex, unsigned int line)
+void DebugFrontend::ToggleBreakpoint(VMHandle vm, int scriptIndex, unsigned int line)
 {
 
     m_commandChannel.WriteUInt32(CommandId_ToggleBreakpoint);
     m_commandChannel.WriteUInt64(vm);
-    m_commandChannel.WriteUInt32(scriptIndex);
+    m_commandChannel.WriteInt32(scriptIndex);
     m_commandChannel.WriteUInt32(line);
     m_commandChannel.Flush();
 
@@ -776,7 +776,7 @@ void DebugFrontend::RemoveAllBreakPoints(VMHandle vm)
 
 }
 
-DebugFrontend::Script* DebugFrontend::GetScript(unsigned int scriptIndex)
+DebugFrontend::Script* DebugFrontend::GetScript(int scriptIndex)
 {
     CriticalSectionLock lock(m_criticalSection);
     if (scriptIndex == -1)
@@ -789,7 +789,7 @@ DebugFrontend::Script* DebugFrontend::GetScript(unsigned int scriptIndex)
     }
 }
 
-unsigned int DebugFrontend::GetScriptIndex(const char* name) const
+int DebugFrontend::GetScriptIndex(const char* name) const
 {
 
     for (unsigned int i = 0; i < m_scripts.size(); ++i)

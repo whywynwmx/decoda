@@ -61,12 +61,12 @@ public:
     /**
      * Returns the index of the script the event relates to.
      */
-    unsigned int GetScriptIndex() const;
+    int GetScriptIndex() const;
 
     /**
      * Sets the index of the script the event relates to.
      */
-    void SetScriptIndex(unsigned int scriptIndex);
+    void SetScriptIndex(int scriptIndex);
 
     /**
      * Returns the number of the line in the script the event relates to.
@@ -123,8 +123,8 @@ private:
     EventId         m_eventId;
     VMHandle        m_vm;
 
-    unsigned int    m_scriptIndex;
-    unsigned int    m_line;
+    int             m_scriptIndex;
+    int             m_line;
 
     bool            m_enabled;
 

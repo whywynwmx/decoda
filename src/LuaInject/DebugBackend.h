@@ -154,7 +154,7 @@ public:
     /**
      * Toggles a breakpoint on the line on or off.
      */
-    void ToggleBreakpoint(lua_State* L, unsigned int scriptIndex, unsigned int line);
+    void ToggleBreakpoint(lua_State* L, int scriptIndex, unsigned int line);
     
     void BreakpointsActiveForScript(int scriptIndex);
     
@@ -421,7 +421,7 @@ private:
         char            module[s_maxModuleNameLength];
         char            name[s_maxEntryNameLength];
         void*           address;
-        unsigned int    scriptIndex;
+        int             scriptIndex;
         unsigned int    line;
     };
 

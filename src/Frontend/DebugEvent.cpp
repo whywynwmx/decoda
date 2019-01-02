@@ -45,12 +45,12 @@ VMHandle wxDebugEvent::GetVm() const
     return m_vm;
 }
 
-void wxDebugEvent::SetScriptIndex(unsigned int scriptIndex)
+void wxDebugEvent::SetScriptIndex(int scriptIndex)
 {
     m_scriptIndex = scriptIndex;
 }
 
-unsigned int wxDebugEvent::GetScriptIndex() const
+int wxDebugEvent::GetScriptIndex() const
 {
     return m_scriptIndex;
 }

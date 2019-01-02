@@ -423,7 +423,7 @@ void CodeEdit::UncommentSelection(const wxString& commentString)
 
 }
 
-unsigned int CodeEdit::GetFirstNonWhitespace(const wxString& text) const
+int CodeEdit::GetFirstNonWhitespace(const wxString& text) const
 {
 
     for (unsigned int c = 0; c < text.Length(); ++c)
