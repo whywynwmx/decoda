@@ -27,18 +27,15 @@ project "Frontend"
 		"src/Shared",
 		"libs/wxWidgets/include",
 		"libs/wxScintilla/include",
-		"libs/Update/include",
 	}
 	libdirs {
 		"libs/wxWidgets/lib/vc_lib",
 		"libs/wxScintilla/lib",
-		"libs/Update/lib",
 	}
     links {
 		"comctl32",
 		"rpcrt4",
 		"imagehlp",
-		"Update",
 		"Shared",
         "tinyxml"
 	}

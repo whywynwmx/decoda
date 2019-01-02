@@ -23,8 +23,6 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include "MainApp.h"
 #include "MainFrame.h"
 #include "SingleInstance.h"
-#include "CrashHandler.h"
-#include "Report.h"
 #include "Config.h"
 
 #include <sstream>
@@ -62,36 +60,8 @@ std::string UrlEncode(const std::string& string)
 
 }
 
-/**
- * Called when the application crashes.
- */
-void CrashCallback(void* address)
-{
-
-    extern const unsigned int g_buildNumber;
-
-    Report report;
-    report.AttachMiniDump();
-
-    if (report.Preview())
-    {
-
-        std::stringstream stream;
-        stream << "Decoda (Build " << MainApp::s_buildNumber << ")";
-
-        std::string buffer = UrlEncode(stream.str());
-        
-        char serverAddress[1024];
-        sprintf(serverAddress, "http://www.unknownworlds.com/game_scripts/report/crash.php?application=%s&address=0x%08X", buffer.c_str(), reinterpret_cast<unsigned int>(address));
-        report.Submit(serverAddress, NULL);
-    
-    }
-
-}
-
 MainApp::MainApp()
 {
-    CrashHandler::SetCallback( CrashCallback );
 }
 
 bool MainApp::OnInit()
@@ -160,8 +130,6 @@ bool MainApp::OnInit()
 
     m_loadProjectName.Clear();
     m_loadFileNames.Clear();
-
-    frame->CheckForUpdate();
 
     if (!m_debugExe.IsEmpty())
     {

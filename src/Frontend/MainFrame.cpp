@@ -196,7 +196,6 @@ BEGIN_EVENT_TABLE(MainFrame, wxFrame)
     // Help menu events.
     EVT_MENU(ID_HelpAbout,                          MainFrame::OnHelpAbout)
     EVT_MENU(ID_HelpSupport,                        MainFrame::OnHelpSupport)
-    EVT_MENU(ID_HelpCheckForUpdate,                 MainFrame::OnHelpCheckForUpdate)
     EVT_MENU(ID_HelpContents,                       MainFrame::OnHelpContents)
 
     // Notebook tab context menu events.
@@ -272,7 +271,6 @@ BEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_THREAD(                                     MainFrame::OnThreadExit)
     
     EVT_COMMAND(wxID_ANY, wxEVT_SHOW_HELP_EVENT,    MainFrame::OnShowHelp)
-    EVT_COMMAND(wxID_ANY, wxEVT_UPDATE_INFO_EVENT,  MainFrame::OnUpdateInfo)
 
     EVT_SYMBOL_PARSER(                              MainFrame::OnSymbolsParsed)
 
@@ -1680,12 +1678,6 @@ void MainFrame::OnWindowCloseAllDocuments(wxCommandEvent& WXUNUSED(event))
 void MainFrame::OnHelpContents(wxCommandEvent& WXUNUSED(event))
 {
     m_helpController.DisplayContents();
-}
-
-void MainFrame::OnHelpCheckForUpdate(wxCommandEvent& event)
-{
-    m_updater.CheckForUpdates(s_updateUrl, MainApp::s_buildNumber, GetHandle());
-    HandleUpdate();
 }
 
 void MainFrame::OnHelpAbout(wxCommandEvent& WXUNUSED(event))
@@ -4078,27 +4070,6 @@ wxXmlNode* MainFrame::SaveExternalTool(const ExternalTool* tool) const
 
 }
 
-void MainFrame::CheckForUpdate()
-{
-
-    // Only check for updates in the non-dedicated version of Decoda. When
-    // Decoda is distributed with another application, we assume the application
-    // will provide updates with the rest of the software.
-
-#ifndef DEDICATED_PRODUCT_VERSION
-
-    if (!m_systemSettings.GetCheckForUpdates())
-    {
-        // The user has turned off checking for updates.
-        return;
-    }
-
-    m_updater.CheckForUpdates(s_updateUrl, MainApp::s_buildNumber, UpdateCallback, this);
-
-#endif
-
-}
-
 bool MainFrame::SaveProject(bool promptForName)
 {
 
@@ -5164,11 +5135,6 @@ void MainFrame::OnShowHelp(wxCommandEvent& event)
     m_helpController.DisplaySection(section);
 }
 
-void MainFrame::OnUpdateInfo(wxCommandEvent& event)
-{
-    HandleUpdate();
-}
-
 void MainFrame::GetProjectSelectedFileNames(std::vector<std::string>& fileNames) const
 {
 
@@ -5827,38 +5793,6 @@ void MainFrame::UpdateDocumentReadOnlyStatus()
 
         file->edit->SetReadOnly(!writeable);
     
-    }
-
-}
-
-void MainFrame::UpdateCallback(Updater* updater, void* param)
-{
-
-    MainFrame* mainFrame = reinterpret_cast<MainFrame*>(param);
-
-    wxCommandEvent event( wxEVT_UPDATE_INFO_EVENT );
-    mainFrame->ProcessEvent( event );
-
-}
-
-void MainFrame::HandleUpdate()
-{
-
-    if (m_updater.ShowUpdateNotice(GetHandle()))
-    {
-
-        // Show the downloading progress dialog.
-        if (!m_updater.DownloadUpdate(GetHandle()))
-        {
-            return;
-        }
-
-        if (m_updater.InstallUpdate())
-        { 
-            // Close the app so the updater will start.
-            Close();
-        }
-
     }
 
 }
