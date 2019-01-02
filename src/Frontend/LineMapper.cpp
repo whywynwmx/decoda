@@ -82,8 +82,8 @@ void LineMapper::Diff(const std::vector<unsigned short>& C, unsigned int r, cons
     if (i > 0 && j > 0 && Equal(X[i - 1 + sm], Y[j - 1 + sn] ))
     {
 
-        m_oldToNew[i - 1 + sm] = j - 1 + sn;
-        m_newToOld[j - 1 + sn] = i - 1 + sm;
+        m_oldToNew[i - 1 + sm] = static_cast<unsigned short>(j - 1 + sn);
+        m_newToOld[j - 1 + sn] = static_cast<unsigned short>(i - 1 + sm);
 
         Diff(C, r, X, Y, sm, sn, i - 1, j - 1);
 
@@ -91,12 +91,12 @@ void LineMapper::Diff(const std::vector<unsigned short>& C, unsigned int r, cons
     else if (j > 0 && (i == 0 || C[i + (j-1) * r] >= C[(i-1) + j * r]))
     {
         Diff(C, r, X, Y, sm, sn, i, j-1);
-        m_newToOld[j - 1 + sn] = -1;
+        m_newToOld[j - 1 + sn] = static_cast<unsigned short>(-1);
     }
     else if (i > 0 && (j == 0 || C[i + (j-1) * r] < C[(i-1) + j * r]))
     {
         Diff(C, r, X, Y, sm, sn, i-1, j);
-        m_oldToNew[i - 1 + sm] = -1;
+        m_oldToNew[i - 1 + sm] = static_cast<unsigned short>(-1);
     }
 
 }
@@ -190,8 +190,8 @@ void LineMapper::Diff(const std::vector<std::string>& X, const std::vector<std::
     // Match up the lines in the beginning that we skipped.
     for (unsigned int i = 0; i <= sm && i < m; ++i)
     {
-        m_oldToNew[i] = i;
-        m_newToOld[i] = i;
+        m_oldToNew[i] = static_cast<unsigned short>(i);
+        m_newToOld[i] = static_cast<unsigned short>(i);
     }
 
     Diff(C, r, X, Y, sm, sn, r - 1, c - 1);
@@ -200,12 +200,12 @@ void LineMapper::Diff(const std::vector<std::string>& X, const std::vector<std::
     
     for (unsigned int i = em + 1; i < m; ++i)
     {
-        m_oldToNew[i] = i - em + en;
+        m_oldToNew[i] = static_cast<unsigned short>(i - em + en);
     }
 
     for (unsigned int i = en + 1; i < n; ++i)
     {
-        m_newToOld[i] = i - en + em;
+        m_newToOld[i] = static_cast<unsigned short>(i - en + em);
     }
 
 }
