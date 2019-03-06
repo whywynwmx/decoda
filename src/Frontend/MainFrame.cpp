@@ -4320,7 +4320,7 @@ MainFrame::OpenFile* MainFrame::OpenProjectFile(Project::File* file)
         const DebugFrontend::Script* script = DebugFrontend::Get().GetScript(file->scriptIndex);
     
         // Set a save point so that the editor doesn't think we need to save this file.
-        openFile->edit->SetText(script->source.c_str());
+        openFile->edit->SetText(wxString(script->source.c_str(), wxConvUTF8));
         openFile->edit->SetSavePoint();
         openFile->edit->EmptyUndoBuffer();
 
