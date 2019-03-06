@@ -2000,7 +2000,8 @@ bool DebugBackend::Evaluate(int api, lua_State* L, const std::string& expression
 
     statement  = "return \n";
     statement += expression;
-    
+   	statement += ";";
+
     int error = LoadScriptWithoutIntercept(api, L, statement.c_str());
 
     if (error == LUA_ERRSYNTAX)
